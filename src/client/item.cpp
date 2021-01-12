@@ -75,7 +75,7 @@ void Item::draw(const Point& dest, float scaleFactor, bool animate, const Highli
         return;
 
     // determine animation phase
-    const int animationPhase = calculateAnimationPhase(animate);
+    const int animationPhase = getCurrentAnimationPhase(animate);
 
     // determine x,y,z patterns
     int xPattern = 0, yPattern = 0, zPattern = 0;
@@ -380,7 +380,7 @@ void Item::calculatePatterns(int& xPattern, int& yPattern, int& zPattern)
     }
 }
 
-int Item::calculateAnimationPhase(bool animate)
+int Item::getCurrentAnimationPhase(bool animate)
 {
     if(!hasAnimationPhases()) return 0;
 
@@ -403,7 +403,7 @@ int Item::calculateAnimationPhase(bool animate)
 int Item::getExactSize(int layer, int xPattern, int yPattern, int zPattern, int animationPhase)
 {
     calculatePatterns(xPattern, yPattern, zPattern);
-    animationPhase = calculateAnimationPhase(true);
+    animationPhase = getCurrentAnimationPhase(true);
     return Thing::getExactSize(layer, xPattern, yPattern, zPattern, animationPhase);
 }
 

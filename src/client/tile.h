@@ -29,6 +29,7 @@
 #include "effect.h"
 #include "item.h"
 #include "mapview.h"
+#include "tiletexturecache.h"
 
 enum tileflags_t : uint32
 {
@@ -202,6 +203,8 @@ private:
     Color m_borderShadowColor;
 
     stdext::boolean<false> m_covered;
+
+    TileTextureCachePtr m_lastTileTextureCache;
 };
 
 #endif

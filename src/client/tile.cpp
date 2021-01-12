@@ -190,6 +190,20 @@ void Tile::draw(const Point& dest, float scaleFactor, int frameFlags, LightView*
 {
     drawGround(dest, scaleFactor, frameFlags, lightView);
     drawBottom(dest, scaleFactor, frameFlags, lightView);
+
+    TileTextureCachePtr lastCache;
+    for(const ThingPtr& thing : m_things) {
+        if(thing->isCreature() || thing->isTopGround()) break;
+
+        const auto& item = thing->static_self_cast<Item>();
+
+        lastCache = lastCache ? lastCache->getCache(thing->static_self_cast<Item>()) : g_tileTextureCache.getCache(item);
+    }
+
+    if(lastCache) {
+        lastCache->getTexture();
+    }
+
     drawTop(dest, scaleFactor, frameFlags, lightView);
 }
 
@@ -786,6 +800,19 @@ void Tile::checkForDetachableThing()
 void Tile::analyzeThing(const ThingPtr& thing, bool add)
 {
     const int value = add ? 1 : -1;
+
+    /*if(thing->isItem()) {
+        if(add) {
+            if(m_lastTileTextureCache) {
+                m_lastTileTextureCache = m_lastTileTextureCache->get(thing->static_self_cast<Item>());
+            } else m_lastTileTextureCache = g_tileTextureCache.get(thing->static_self_cast<Item>());
+        } else {
+            for(const ThingPtr& thing : m_things) {
+                if(thing->isCreature() || thing->isTopGround())
+                    items.push_back(thing->static_self_cast<Item>());
+            }
+        }
+    }*/
 
     if(thing->hasLight())
         m_countFlag.hasLight += value;

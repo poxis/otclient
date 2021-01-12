@@ -132,7 +132,7 @@ public:
     ItemPtr clone();
     ItemPtr asItem() { return static_self_cast<Item>(); }
     bool isItem() override { return true; }
-    
+
     ItemVector getContainerItems() { return m_containerItems; }
     ItemPtr getContainerItem(int slot) { return m_containerItems[slot]; }
     void addContainerItemIndexed(const ItemPtr& i, int slot) { m_containerItems[slot] = i; }
@@ -141,7 +141,7 @@ public:
     void clearContainerItems() { m_containerItems.clear(); }
 
     void calculatePatterns(int& xPattern, int& yPattern, int& zPattern);
-    int calculateAnimationPhase(bool animate);
+    int getCurrentAnimationPhase(bool animate);
     int getExactSize(int layer = 0, int xPattern = 0, int yPattern = 0, int zPattern = 0, int animationPhase = 0) override;
 
     const ThingTypePtr& getThingType() override;

@@ -56,6 +56,9 @@ public:
     virtual bool isAnimatedTexture() { return false; }
     bool isOpaque() const { return m_opaque; }
 
+    const ImagePtr& getImage() { return m_image; }
+    TexturePtr clone();
+
 protected:
     void createTexture();
     bool setupSize(const Size& size, bool forcePowerOfTwo = false);
@@ -69,6 +72,7 @@ protected:
     Size m_size;
     Size m_glSize;
     Matrix3 m_transformMatrix;
+    ImagePtr m_image;
     stdext::boolean<false> m_hasMipmaps;
     stdext::boolean<false> m_smooth;
     stdext::boolean<false> m_upsideDown;

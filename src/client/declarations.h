@@ -53,6 +53,7 @@ class Town;
 class CreatureType;
 class Spawn;
 class TileBlock;
+class TileTextureCache;
 
 typedef stdext::shared_object_ptr<MapView> MapViewPtr;
 typedef stdext::shared_object_ptr<LightView> LightViewPtr;
@@ -76,6 +77,7 @@ typedef stdext::shared_object_ptr<House> HousePtr;
 typedef stdext::shared_object_ptr<Town> TownPtr;
 typedef stdext::shared_object_ptr<CreatureType> CreatureTypePtr;
 typedef stdext::shared_object_ptr<Spawn> SpawnPtr;
+typedef stdext::shared_object_ptr<TileTextureCache> TileTextureCachePtr;
 
 typedef std::vector<ThingPtr> ThingList;
 typedef std::vector<ThingTypePtr> ThingTypeList;
