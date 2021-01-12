@@ -43,7 +43,7 @@ TileTextureCachePtr TileTextureCache::getCache(const ItemPtr& item)
     for(size_t i = -1; ++i < size;) {
         TileTextureCachePtr ttc = TileTextureCachePtr(new TileTextureCache);
         ttc->m_parent = this;
-        ttc->m_texture = thingType->getTexture(item->getCurrentAnimationPhase(false))->clone();
+        ttc->m_texture = thingType->generateTexture(item->getCurrentAnimationPhase(false));
         if(this->m_texture)
             ttc->m_texture->uploadPixels(this->m_texture->getImage());
 

@@ -57,7 +57,6 @@ public:
     bool isOpaque() const { return m_opaque; }
 
     const ImagePtr& getImage() { return m_image; }
-    TexturePtr clone();
 
 protected:
     void createTexture();

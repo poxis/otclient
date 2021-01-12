@@ -485,6 +485,11 @@ const TexturePtr& ThingType::getTexture(int animationPhase, bool allBlank)
     TexturePtr& animationPhaseTexture = (allBlank ? m_blankTextures : m_textures)[animationPhase];
     if(animationPhaseTexture) return animationPhaseTexture;
 
+    return animationPhaseTexture = generateTexture(animationPhase, allBlank);
+}
+
+const TexturePtr ThingType::generateTexture(int animationPhase, bool allBlank)
+{
     bool useCustomImage = false;
     if(animationPhase == 0 && !m_customImage.empty())
         useCustomImage = true;
@@ -564,7 +569,7 @@ const TexturePtr& ThingType::getTexture(int animationPhase, bool allBlank)
         }
     }
 
-    animationPhaseTexture = TexturePtr(new Texture(fullImage, true));
+    TexturePtr animationPhaseTexture = TexturePtr(new Texture(fullImage, true));
     animationPhaseTexture->setSmooth(true);
 
     return animationPhaseTexture;

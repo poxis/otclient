@@ -219,6 +219,7 @@ public:
     void setPathable(bool var);
     int getExactHeight();
     const TexturePtr& getTexture(int animationPhase, bool allBlank = false);
+    const TexturePtr generateTexture(int animationPhase, bool allBlank = false);
 
 private:
     bool hasTexture() const { return !m_textures.empty(); }

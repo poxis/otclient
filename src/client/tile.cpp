@@ -201,7 +201,7 @@ void Tile::draw(const Point& dest, float scaleFactor, int frameFlags, LightView*
     }
 
     if(lastCache) {
-        //g_painter->drawTexturedRect(screenRect, lastCache->getTexture(), textureRect);
+        g_painter->drawTexturedRect(screenRect, lastCache->getTexture(), textureRect);
     }
 
     drawTop(dest, scaleFactor, frameFlags, lightView);

@@ -68,13 +68,6 @@ Texture::~Texture()
         glDeleteTextures(1, &m_id);
 }
 
-TexturePtr Texture::clone()
-{
-    TexturePtr obj = TexturePtr(new Texture);
-    *(obj.get()) = *this;
-    return obj;
-}
-
 void Texture::uploadPixels(const ImagePtr& image, bool buildMipmaps, bool compress)
 {
     if(!setupSize(image->getSize(), buildMipmaps))
