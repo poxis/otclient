@@ -33,7 +33,7 @@ class TileTextureCache : public stdext::shared_object
 {
 public:
     TileTextureCache() {};
-    TileTextureCachePtr& getCache(const ItemPtr& item);
+    TileTextureCachePtr getCache(const ItemPtr& item);
 
     const TexturePtr& getTexture() { return m_texture; }
 

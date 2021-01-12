@@ -24,16 +24,15 @@
 
 TileTextureCache g_tileTextureCache;
 
-TileTextureCachePtr& TileTextureCache::getCache(const ItemPtr& item)
+TileTextureCachePtr TileTextureCache::getCache(const ItemPtr& item)
 {
-    const auto& point = m_children.find(item->getId());
+    const int key = item->getId();
+    const auto& point = m_children.find(key);
+    const int currentAnimationPhase = item->getCurrentAnimationPhase(false);
 
     if(point != m_children.end()) {
-        return point->second[item->getCurrentAnimationPhase(false)];
+        return point->second[currentAnimationPhase];
     }
-
-    TileTextureCachePtr ttc = TileTextureCachePtr(new TileTextureCache);
-    m_parent = this;
 
     const auto& thingType = item->getThingType();
     const auto size = thingType->getAnimationPhases();
@@ -42,16 +41,16 @@ TileTextureCachePtr& TileTextureCache::getCache(const ItemPtr& item)
     list.resize(size);
 
     for(size_t i = -1; ++i < size;) {
-        if(m_parent == nullptr) {
+        TileTextureCachePtr ttc = TileTextureCachePtr(new TileTextureCache);
+        ttc->m_parent = this;
+        ttc->m_texture = thingType->getTexture(item->getCurrentAnimationPhase(false))->clone();
+        if(this->m_texture)
+            ttc->m_texture->uploadPixels(this->m_texture->getImage());
 
-
-            list[i] = thingType->getTexture(i)->clone();
-        } else if(const auto& texture = m_parent->m_texture)
-        {
-            const auto clone = texture->clone();
-            clone->uploadPixels(thingType->getTexture(i)->getImage());
-        }
+        list[0] = ttc;
     }
 
-    return ttc;
+    m_children.insert(std::make_pair(key, list));
+
+    return list[currentAnimationPhase];
 }

@@ -191,17 +191,17 @@ void Tile::draw(const Point& dest, float scaleFactor, int frameFlags, LightView*
     drawGround(dest, scaleFactor, frameFlags, lightView);
     drawBottom(dest, scaleFactor, frameFlags, lightView);
 
-    TileTextureCachePtr lastCache;
+    TileTextureCachePtr lastCache = nullptr;
     for(const ThingPtr& thing : m_things) {
         if(thing->isCreature() || thing->isTopGround()) break;
 
         const auto& item = thing->static_self_cast<Item>();
 
-        lastCache = lastCache ? lastCache->getCache(thing->static_self_cast<Item>()) : g_tileTextureCache.getCache(item);
+        lastCache = g_tileTextureCache.getCache(item);
     }
 
     if(lastCache) {
-        lastCache->getTexture();
+        //g_painter->drawTexturedRect(screenRect, lastCache->getTexture(), textureRect);
     }
 
     drawTop(dest, scaleFactor, frameFlags, lightView);
