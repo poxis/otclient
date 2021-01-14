@@ -84,7 +84,7 @@ void Item::draw(const Point& dest, float scaleFactor, bool animate, const Highli
     if(m_color != Color::alpha)
         g_painter->setColor(m_color);
 
-    rawGetThingType()->draw(dest, scaleFactor, 0, xPattern, yPattern, zPattern, animationPhase, false, frameFlag, lightView);
+    rawGetThingType()->draw(m_position, dest, scaleFactor, 0, xPattern, yPattern, zPattern, animationPhase, false, frameFlag, lightView);
 
     /// Sanity check
     /// This is just to ensure that we don't overwrite some color and
@@ -94,7 +94,7 @@ void Item::draw(const Point& dest, float scaleFactor, bool animate, const Highli
 
     if(highLight.enabled && this == highLight.thing) {
         g_painter->setColor(highLight.rgbColor);
-        rawGetThingType()->draw(dest, scaleFactor, 0, xPattern, yPattern, zPattern, animationPhase, true, frameFlag, lightView);
+        rawGetThingType()->draw(m_position, dest, scaleFactor, 0, xPattern, yPattern, zPattern, animationPhase, true, frameFlag, lightView);
         g_painter->resetColor();
     }
 }

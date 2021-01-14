@@ -33,6 +33,7 @@ struct LightSource {
     Color color;
     Point center;
     int radius;
+    Position pos;
 };
 
 class LightView : public LuaObject
@@ -42,7 +43,7 @@ public:
 
     void reset();
     void setGlobalLight(const Light& light);
-    void addLightSource(const Point& center, float scaleFactor, const Light& light);
+    void addLightSource(const Position& pos, const Point& center, float scaleFactor, const Light& light);
     void resize(const Size& size);
     void draw(const Rect& dest, const Rect& src);
 

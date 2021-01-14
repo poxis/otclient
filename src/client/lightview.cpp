@@ -26,6 +26,7 @@
 #include <framework/graphics/image.h>
 #include <framework/graphics/painter.h>
 #include "mapview.h"
+#include "map.h"
 
 enum {
     MAX_LIGHT_INTENSITY = 8,
@@ -35,7 +36,7 @@ enum {
 LightView::LightView()
 {
     m_lightbuffer = g_framebuffers.createFrameBuffer();
-    m_lightTexture = generateLightBubble(0.1f);
+    m_lightTexture = generateLightBubble(.0f);
     m_blendEquation = Painter::BlendEquation_Add;
     reset();
 }
@@ -43,7 +44,7 @@ LightView::LightView()
 TexturePtr LightView::generateLightBubble(float centerFactor)
 {
     const int bubbleRadius = 256;
-    const int centerRadius = bubbleRadius * centerFactor;
+    const int centerRadius = 0;
     const int bubbleDiameter = bubbleRadius * 2;
     ImagePtr lightImage = ImagePtr(new Image(Size(bubbleDiameter, bubbleDiameter)));
 
@@ -54,7 +55,7 @@ TexturePtr LightView::generateLightBubble(float centerFactor)
 
             // light intensity varies inversely with the square of the distance
             intensity *= intensity;
-            const uint8_t colorByte = intensity * 0xB4;
+            const uint8_t colorByte = intensity * 240;
 
             uint8_t pixel[4] = { colorByte, colorByte, colorByte, 0xff };
             lightImage->setPixel(x, y, pixel);
@@ -76,22 +77,20 @@ void LightView::setGlobalLight(const Light& light)
     m_globalLight = light;
 }
 
-void LightView::addLightSource(const Point& center, float scaleFactor, const Light& light)
+void LightView::addLightSource(const Position& pos, const Point& center, float scaleFactor, const Light& light)
 {
-    const int intensity = light.intensity;
-    const int radius = (intensity * Otc::TILE_PIXELS * scaleFactor) * 1.25;
+    int intensity = std::min<int>(light.intensity, MAX_LIGHT_INTENSITY);
+    int radius = intensity * Otc::TILE_PIXELS * scaleFactor;
 
     Color color = Color::from8bit(light.color);
-
-    const float brightnessLevel = light.intensity > 1 ? 0.7 : 0.2f;
-    const float brightness = brightnessLevel + (intensity / static_cast<float>(MAX_LIGHT_INTENSITY)) * brightnessLevel;
+    float brightness = 0.5f + (intensity / (float)MAX_LIGHT_INTENSITY) * 0.5f;
 
     color.setRed(color.rF() * brightness);
     color.setGreen(color.gF() * brightness);
     color.setBlue(color.bF() * brightness);
 
     if(m_blendEquation == Painter::BlendEquation_Add && !m_lightMap.empty()) {
-        const LightSource prevSource = m_lightMap.back();
+        LightSource prevSource = m_lightMap.back();
         if(prevSource.center == center && prevSource.color == color && prevSource.radius == radius)
             return;
     }
@@ -145,8 +144,21 @@ void LightView::draw(const Rect& dest, const Rect& src)
         g_painter->setBlendEquation(m_blendEquation);
         g_painter->setCompositionMode(Painter::CompositionMode_Add);
 
-        for(const LightSource& source : m_lightMap)
+        for(const LightSource& source : m_lightMap) {
             drawLightSource(source.center, source.color, source.radius);
+        }
+
+        g_painter->setCompositionMode(Painter::CompositionMode_Replace);
+        for(const LightSource& source : m_lightMap) {
+            Color color = Color::from8bit(m_globalLight.color);
+            const float brightness = m_globalLight.intensity / static_cast<float>(MAX_AMBIENT_LIGHT_INTENSITY);
+            color.setRed(color.rF() * brightness);
+            color.setGreen(color.gF() * brightness);
+            color.setBlue(color.bF() * brightness);
+
+            g_painter->setColor(color);
+            g_painter->drawFilledRect(Rect(source.center, Size(Otc::TILE_PIXELS, Otc::TILE_PIXELS)));
+        }
 
         m_lightbuffer->release();
     }
