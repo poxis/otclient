@@ -183,11 +183,12 @@ void Map::addThing(const ThingPtr& thing, const Position& pos, int stackPos)
             for(const auto& other : m_staticTexts) {
                 // try to combine messages
                 if(other->getPosition() == pos && other->addMessage(staticText->getName(), staticText->getMessageMode(), staticText->getFirstMessage())) {
+                    thing->schedulePainting();
                     return;
                 }
             }
-            m_staticTexts.push_back(staticText);
 
+            m_staticTexts.push_back(staticText);
             thing->schedulePainting();
         }
 
@@ -636,6 +637,13 @@ void Map::setCentralPosition(const Position& centralPosition)
         mapView->onMapCenterChange(centralPosition);
 }
 
+void Map::setLight(const Light& light)
+{
+    m_light = light;
+    for(const MapViewPtr& mapView : m_mapViews)
+        mapView->onGlobalLightChange(m_light);
+}
+
 std::vector<CreaturePtr> Map::getSightSpectators(const Position& centerPos, bool multiFloor)
 {
     return getSpectatorsInRangeEx(centerPos, multiFloor, m_awareRange.left - 1, m_awareRange.right - 2, m_awareRange.top - 1, m_awareRange.bottom - 2);
@@ -697,6 +705,10 @@ bool Map::isCovered(const Position& pos, int firstFloor)
         // the below tile is covered when the above tile has a full opaque
         if(tile && tile->isFullyOpaque())
             return true;
+
+        tile = getTile(tilePos.translated(1, 1));
+        if(tile && tile->isTopGround())
+            return true;
     }
     return false;
 }
@@ -708,6 +720,26 @@ bool Map::isCompletelyCovered(const Position& pos, int firstFloor)
     while(tilePos.coveredUp() && tilePos.z >= firstFloor) {
         bool covered = true;
         bool done = false;
+
+        // Check is Top Ground
+        for(int x = 0; x < 2 && !done; ++x) {
+            for(int y = 0; y < 2 && !done; ++y) {
+                const TilePtr& tile = getTile(tilePos.translated(x, x));
+                if(!tile || !tile->isTopGround()) {
+                    covered = false;
+                    done = true;
+                } else if(x == 1 && y == 1 && (!checkTile || checkTile->isSingleDimension())) {
+                    done = true;
+                }
+            }
+        }
+
+        if(covered)
+            return true;
+
+        covered = true;
+        done = false;
+
         // check in 2x2 range tiles that has no transparent pixels
         for(int x = 0; x < 2 && !done; ++x) {
             for(int y = 0; y < 2 && !done; ++y) {
@@ -720,6 +752,7 @@ bool Map::isCompletelyCovered(const Position& pos, int firstFloor)
                 }
             }
         }
+
         if(covered)
             return true;
     }

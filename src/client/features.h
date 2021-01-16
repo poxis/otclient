@@ -26,5 +26,12 @@
  // Define 1, to draw creature information after light.
 #define DRAW_CREATURE_INFORMATION_AFTER_LIGHT 0
 
- // Define 1 to render behind the first creature added.
+ // Define 1 so that a last creature that entered SQM is rendered behind the previous one.
 #define RENDER_CREATURE_BEHIND 0
+
+// Define 1 to force the rendering of animated things without waiting for the minimum mandatory interval.
+#define FORCE_ANIMATED_RENDERING 0
+
+// #Define 1 to increase "flush time" when there are many rendering requests,
+// thus avoiding CPU consumption, however there will be a delay in rendering.
+#define FLUSH_CONTROL_FOR_RENDERING 1

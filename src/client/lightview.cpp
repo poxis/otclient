@@ -160,6 +160,8 @@ void LightView::draw(const Rect& dest, const Rect& src)
             g_painter->drawFilledRect(Rect(source.center, Size(Otc::TILE_PIXELS, Otc::TILE_PIXELS)));
         }
 
+        m_lightMap.clear();
+
         m_lightbuffer->release();
     }
     g_painter->setCompositionMode(Painter::CompositionMode_Light);

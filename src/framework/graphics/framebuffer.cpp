@@ -28,6 +28,8 @@
 #include <framework/platform/platformwindow.h>
 #include <framework/core/application.h>
 
+#include <client/features.h>
+
 uint FrameBuffer::boundFbo = 0;
 
 FrameBuffer::FrameBuffer()
@@ -177,7 +179,11 @@ void FrameBuffer::update()
 
 const uint8_t FrameBuffer::flushTime()
 {
+#if FLUSH_CONTROL_FOR_RENDERING == 1
     return std::min<uint8_t>(MIN_TIME_UPDATE + std::floor<uint8_t>(m_requestAmount / FLUSH_AMOUNT), MAX_TIME_UPDATE);
+#else
+    return MIN_TIME_UPDATE;
+#endif
 }
 
 void FrameBuffer::schedulePainting(const uint16_t time)
@@ -190,8 +196,6 @@ void FrameBuffer::schedulePainting(const uint16_t time)
     }
 
     if(time <= MIN_TIME_UPDATE) {
-
-
         update();
         return;
     }
@@ -199,7 +203,11 @@ void FrameBuffer::schedulePainting(const uint16_t time)
     auto& schedule = m_schedules[time];
     if(schedule.first == 0) {
         schedule.second = g_dispatcher.cycleEvent([=]() {
+#if FORCE_ANIMATED_RENDERING == 1
+            m_forceUpdate = true;
+#else
             update();
+#endif
         }, time);
     }
 

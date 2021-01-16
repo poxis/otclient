@@ -141,7 +141,7 @@ public:
     bool isTopEffect() { return rawGetThingType()->isTopEffect(); }
     bool hasAction() { return rawGetThingType()->hasAction(); }
     bool isOpaque() { return rawGetThingType()->isOpaque(); }
-    bool isTopGround() { return getWidth() != 1 && getHeight() != 1 && isGround(); }
+    bool isTopGround() { return isGround() && !isFullGround() && blockProjectile() && getWidth() != 1 && getHeight() != 1; }
     bool isTall(const bool useRealSize = false) { return rawGetThingType()->isTall(useRealSize); }
 
     MarketData getMarketData() { return rawGetThingType()->getMarketData(); }
@@ -151,8 +151,8 @@ public:
     virtual void onDisappear() {}
 
 protected:
-    uint16 m_datId;
     Position m_position;
+    uint16 m_datId;
 };
 #pragma pack(pop)
 

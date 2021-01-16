@@ -96,21 +96,7 @@ void MapView::draw(const Rect& rect)
     const auto redrawLight = m_drawLights && m_lightView->canUpdate();
 
     if(redrawThing || redrawLight) {
-        if(redrawLight) {
-            Light ambientLight;
-            if(cameraPosition.z > Otc::SEA_FLOOR) {
-                ambientLight.color = 215;
-                ambientLight.intensity = 0;
-            } else ambientLight = g_map.getLight();
-
-            ambientLight.intensity = std::max<int>(m_minimumAmbientLight * 255, ambientLight.intensity);
-            m_lightView->setGlobalLight(ambientLight);
-
-            m_lightView->reset();
-            m_lightView->resize(m_frameCache.tile->getSize());
-
-            m_frameCache.flags |= Otc::FUpdateLight;
-        }
+        if(redrawLight) m_frameCache.flags |= Otc::FUpdateLight;
 
         if(redrawThing) {
             m_frameCache.tile->bind();
@@ -402,7 +388,7 @@ void MapView::updateVisibleTilesCache()
                         continue;
 
                     // skip tiles that are completely behind another tile
-                    if(g_map.isCompletelyCovered(tilePos, m_cachedFirstVisibleFloor))
+                    if(tile->isCompletelyCovered(m_cachedFirstVisibleFloor))
                         continue;
 
                     floor.push_back(tile);
@@ -480,6 +466,7 @@ void MapView::updateGeometry(const Size& visibleDimension, const Size& optimized
 
     m_frameCache.tile->resize(bufferSize);
     m_frameCache.crosshair->resize(bufferSize);
+    if(m_drawLights) m_lightView->resize(bufferSize);
 
     m_frameCache.staticText->resize(g_graphics.getViewportSize());
     m_frameCache.creatureInformation->resize(g_graphics.getViewportSize());
@@ -496,15 +483,34 @@ void MapView::updateGeometry(const Size& visibleDimension, const Size& optimized
     requestVisibleTilesCacheUpdate();
 }
 
+void MapView::onGlobalLightChange(const Light&)
+{
+    updateLight();
+}
+
+void MapView::updateLight()
+{
+    if(!m_drawLights) return;
+
+    const auto cameraPosition = getCameraPosition();
+    Light ambientLight;
+    if(cameraPosition.z > Otc::SEA_FLOOR) {
+        ambientLight.color = 215;
+        ambientLight.intensity = 0;
+    } else ambientLight = g_map.getLight();
+    ambientLight.intensity = std::max<int>(m_minimumAmbientLight * 255, ambientLight.intensity);
+
+    m_lightView->setGlobalLight(ambientLight);
+    m_lightView->schedulePainting();
+}
+
 void MapView::onFloorChange(const short /*floor*/, const short /*previousFloor*/)
 {
     const auto cameraPosition = getCameraPosition();
 
-    if(m_drawLights) {
-        m_lightView->schedulePainting();
-    }
-
     m_visibleCreatures = getSpectators(cameraPosition, false);
+
+    updateLight();
 }
 
 void MapView::onFloorDrawingStart(const short floor)
@@ -627,6 +633,8 @@ void MapView::followCreature(const CreaturePtr& creature)
 {
     m_follow = true;
     m_followingCreature = creature;
+    m_lastCameraPosition = Position();
+
     m_visibleCreatures.clear();
     m_visibleCreatures.push_back(creature);
 
@@ -825,10 +833,14 @@ void MapView::setDrawLights(bool enable)
 {
     if(enable == m_drawLights) return;
 
-    m_lightView = enable ? LightViewPtr(new LightView) : nullptr;
+    if(enable) {
+        m_lightView = LightViewPtr(new LightView);
+        m_lightView->resize(m_frameCache.tile->getSize());
+    } else m_lightView = nullptr;
+
     m_drawLights = enable;
 
-    schedulePainting(Otc::FUpdateAll);
+    updateLight();
 }
 
 void MapView::updateViewportDirectionCache()
@@ -1003,7 +1015,7 @@ void MapView::drawSeparately(const int floor, const ViewPort& viewPort, LightVie
         tile->drawTop(pos2d, m_scaleFactor, m_frameCache.flags, lightView);
 
         if(!tile->hasGroundToDraw()) tile->drawEnd(this);
-    }
+}
 }
 #endif
 /* vim: set ts=4 sw=4 et: */
