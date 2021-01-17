@@ -30,11 +30,15 @@
 #include "thingtype.h"
 
 struct LightSource {
-    Color color;
+    Color color = Color::alpha;
     Point center;
     int radius;
     Position pos;
     uint8_t intensity;
+
+    void reset() { pos = Position(); color = Color::alpha; }
+    bool hasLight() const { return color != Color::alpha; }
+    bool isValid() const { return radius == -1; }
 };
 
 class LightView : public LuaObject
@@ -61,7 +65,6 @@ private:
     void addLightSourceV2(const Position& pos, const Point& center, float scaleFactor, const Light& light, const ThingPtr& thing);
     void drawGlobalLight(const Light& light);
     void drawLightSource(const LightSource& light);
-
     bool canDrawLight(const Position& pos);
 
     Light m_globalLight;
@@ -75,6 +78,8 @@ private:
 
     std::vector<LightSource> m_lightMap;
     MapViewPtr m_mapView;
+
+    int getLightSourceIndex(const Position& pos);
 
     uint8 m_version;
 };

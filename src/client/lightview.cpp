@@ -135,15 +135,13 @@ void LightView::addLightSourceV2(const Position& pos, const Point& center, float
         intensity = std::max<int>(awareRange.right, awareRange.bottom);
     }
 
-    const int radius = (Otc::TILE_PIXELS * scaleFactor) * 2.6,
+    const int radius = (Otc::TILE_PIXELS * scaleFactor) * 2.4,
         s = std::floor(static_cast<float>(intensity) / 1.3),
         start = s * -1,
         middle = s / 2;
 
     const float brightnessLevel = light.intensity > 1 ? 0.5f : 0.2f;
     const float brightness = brightnessLevel + (intensity / static_cast<float>(MAX_LIGHT_INTENSITY)) * brightnessLevel;
-
-    const auto& mapWidth = m_mapView->m_drawDimension.width();
 
     const Point& moveOffset = thing && thing->isCreature() ? thing->static_self_cast<Creature>()->getWalkOffset() : Point();
 
@@ -163,44 +161,52 @@ void LightView::addLightSourceV2(const Position& pos, const Point& center, float
                 )) continue;
 
             auto& posLight = pos.translated(x, y);
-            const auto& point = m_mapView->transformPositionTo2D(posLight, m_mapView->getCameraPosition());
-
-            size_t index = (point.y / Otc::TILE_PIXELS) * mapWidth + (point.x / Otc::TILE_PIXELS);
-            if(index >= m_lightMap.size() || !canDrawLight(posLight)) continue;
+            const int index = getLightSourceIndex(posLight);
+            if(index == -1 || !canDrawLight(posLight)) continue;
 
             int distance = Otc::TILE_PIXELS;
             if(absX == s && absY == 0 || absY == s && absX == 0)
                 distance /= 1.2;
 
-            auto& light = m_lightMap[index];
             const auto& newCenter = center + ((Point(x, y) * distance));
-            if(light.pos.isValid()) {
-                if(intensity > light.intensity) {
-                    light.color = color;
-                    light.center = newCenter;
+
+            auto& lightSource = m_lightMap[index];
+            if(lightSource.hasLight()) {
+                if(intensity > lightSource.intensity) {
+                    lightSource.color = color;
+                    lightSource.center = newCenter;
                 }
                 continue;
             }
 
             Point _moveOffset = moveOffset;
             if(!moveOffset.isNull()) {
-                Position& posCheck = posLight.translatedToDirection(thing->static_self_cast<Creature>()->getDirection());
+                const CreaturePtr& c = thing->static_self_cast<Creature>();
+                Position& posCheck = posLight.translatedToDirection(c->getDirection());
                 if(!canDrawLight(posCheck)) _moveOffset = Point();
                 else {
-                    posCheck = posLight.translatedToReverseDirection(thing->static_self_cast<Creature>()->getDirection());
+                    posCheck = posLight.translatedToReverseDirection(c->getDirection());
                     if(!canDrawLight(posCheck)) _moveOffset = Point();
                 }
             }
 
-            LightSource source;
-            source.center = newCenter + _moveOffset;
-            source.color = color;
-            source.radius = radius;
-            source.pos = posLight;
-            source.intensity = intensity;
-            m_lightMap[index] = source;
+            lightSource.center = newCenter + _moveOffset;
+            lightSource.color = color;
+            lightSource.radius = radius;
+            lightSource.pos = posLight;
+            lightSource.intensity = intensity;
         }
     }
+}
+
+int LightView::getLightSourceIndex(const Position& pos)
+{
+    const auto& point = m_mapView->transformPositionTo2D(pos, m_mapView->getCameraPosition());
+    size_t index = (point.y / Otc::TILE_PIXELS) * m_mapView->m_drawDimension.width() + (point.x / Otc::TILE_PIXELS);
+
+    if(index >= m_lightMap.size()) return -1;
+
+    return index;
 }
 
 bool LightView::canDrawLight(const Position& pos)
@@ -269,7 +275,7 @@ void LightView::draw(const Rect& dest, const Rect& src)
                 if(!source.pos.isValid())continue;
 
                 drawLightSource(source);
-                source.pos = Position();
+                source.reset();
             }
         }
 
