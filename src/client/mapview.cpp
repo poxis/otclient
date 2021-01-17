@@ -86,16 +86,15 @@ MapView::~MapView()
 
 void MapView::draw(const Rect& rect)
 {
-    m_rect = rect;
-
     // update visible tiles cache when needed
     if(m_mustUpdateVisibleTilesCache)
         updateVisibleTilesCache();
 
     const Position cameraPosition = getCameraPosition();
-
     const auto redrawThing = m_frameCache.tile->canUpdate();
     const auto redrawLight = m_drawLights && m_lightView->canUpdate();
+
+    m_srcRect = calcFramebufferSource(rect.size());
 
     if(redrawThing || redrawLight) {
         if(redrawLight) m_frameCache.flags |= Otc::FUpdateLight;
@@ -122,10 +121,8 @@ void MapView::draw(const Rect& rect)
 
                 if(!redrawThing && !hasLight || !canRenderTile(tile, viewPort, lightView)) continue;
 
-                const Position& tilePos = tile->getPosition();
-
                 tile->drawStart(this);
-                tile->draw(transformPositionTo2D(tilePos, cameraPosition), m_scaleFactor, m_frameCache.flags, lightView);
+                tile->draw(transformPositionTo2D(tile->getPosition(), cameraPosition), m_scaleFactor, m_frameCache.flags, lightView);
                 tile->drawEnd(this);
             }
 #endif
@@ -157,7 +154,7 @@ void MapView::draw(const Rect& rect)
     if(m_shaderSwitchDone && m_shader && m_fadeInTime > 0)
         fadeOpacity = std::min<float>(m_fadeTimer.timeElapsed() / m_fadeInTime, 1.0f);
 
-    const Rect srcRect = calcFramebufferSource(rect.size());
+    const Rect srcRect = m_srcRect;
     const Point drawOffset = srcRect.topLeft();
 
     if(m_shader && g_painter->hasShaders() && g_graphics.shouldUseShaders() && m_viewMode == NEAR_VIEW) {

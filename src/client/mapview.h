@@ -191,10 +191,8 @@ private:
 
     Rect calcFramebufferSource(const Size& destSize);
 
-    Point transformPositionTo2D(const Position& position, Position relativePosition = Position())
+    Point transformPositionTo2D(const Position& position, const Position& relativePosition)
     {
-        if(!relativePosition.isValid()) relativePosition = getCameraPosition();
-
         return Point((m_virtualCenterOffset.x + (position.x - relativePosition.x) - (relativePosition.z - position.z)) * m_tileSize,
                      (m_virtualCenterOffset.y + (position.y - relativePosition.y) - (relativePosition.z - position.z)) * m_tileSize);
     }
@@ -265,7 +263,7 @@ private:
 
     AwareRange m_awareRange;
 
-    Rect m_rect;
+    Rect m_srcRect;
 };
 
 #endif

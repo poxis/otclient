@@ -44,7 +44,7 @@ public:
 
     void reset();
     void setGlobalLight(const Light& light);
-    void addLightSource(const Point& center, float scaleFactor, const Light& light);
+    void addLightSource(const Position& pos, const Point& center, float scaleFactor, const Light& light, const ThingPtr& thing = nullptr);
     void resize();
     void draw(const Rect& dest, const Rect& src);
 
@@ -58,9 +58,11 @@ public:
 
 private:
     void addLightSourceV1(const Point& center, float scaleFactor, const Light& light);
-    void addLightSourceV2(const Point& center, float scaleFactor, const Light& light);
+    void addLightSourceV2(const Position& pos, const Point& center, float scaleFactor, const Light& light, const ThingPtr& thing);
     void drawGlobalLight(const Light& light);
     void drawLightSource(const LightSource& light);
+
+    bool canDrawLight(const Position& pos);
 
     Light m_globalLight;
 
