@@ -86,6 +86,8 @@ MapView::~MapView()
 
 void MapView::draw(const Rect& rect)
 {
+    m_rect = rect;
+
     // update visible tiles cache when needed
     if(m_mustUpdateVisibleTilesCache)
         updateVisibleTilesCache();
@@ -466,7 +468,7 @@ void MapView::updateGeometry(const Size& visibleDimension, const Size& optimized
 
     m_frameCache.tile->resize(bufferSize);
     m_frameCache.crosshair->resize(bufferSize);
-    if(m_drawLights) m_lightView->resize(bufferSize, m_drawDimension);
+    if(m_drawLights) m_lightView->resize();
 
     m_frameCache.staticText->resize(g_graphics.getViewportSize());
     m_frameCache.creatureInformation->resize(g_graphics.getViewportSize());
@@ -835,7 +837,7 @@ void MapView::setDrawLights(bool enable)
 
     if(enable) {
         m_lightView = LightViewPtr(new LightView(this, 2));
-        m_lightView->resize(m_frameCache.tile->getSize(), m_drawDimension);
+        m_lightView->resize();
     } else m_lightView = nullptr;
 
     m_drawLights = enable;

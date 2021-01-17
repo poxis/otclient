@@ -35,17 +35,28 @@ enum {
 
 LightView::LightView(const MapViewPtr& mapView, const uint8 version)
 {
-    m_lightbuffer = g_framebuffers.createFrameBuffer();
-    m_lightTexture = generateLightBubble(.0f);
-    m_blendEquation = Painter::BlendEquation_Add;
     m_mapView = mapView;
     m_version = version;
+
+    m_lightbuffer = g_framebuffers.createFrameBuffer();
+    m_lightTexture = generateLightBubble();
+    m_blendEquation = Painter::BlendEquation_Add;
 
     reset();
 }
 
-TexturePtr LightView::generateLightBubble(float centerFactor)
+TexturePtr LightView::generateLightBubble()
 {
+    int intensityVariant;
+    float centerFactor;
+    if(m_version == 1) {
+        centerFactor = .1f;
+        intensityVariant = 0xB4;
+    } else {
+        centerFactor = .0f;
+        intensityVariant = 0x46;
+    }
+
     const int bubbleRadius = 256;
     const int centerRadius = bubbleRadius * centerFactor;
     const int bubbleDiameter = bubbleRadius * 2;
@@ -58,7 +69,7 @@ TexturePtr LightView::generateLightBubble(float centerFactor)
 
             // light intensity varies inversely with the square of the distance
             intensity *= intensity;
-            const uint8_t colorByte = intensity * 70;
+            const uint8_t colorByte = intensity * intensityVariant;
 
             uint8_t pixel[4] = { colorByte, colorByte, colorByte, 0xff };
             lightImage->setPixel(x, y, pixel);
@@ -80,7 +91,43 @@ void LightView::setGlobalLight(const Light& light)
     m_globalLight = light;
 }
 
-void LightView::addLightSource(const Position& pos, const Point& center, float scaleFactor, const Light& light)
+void LightView::addLightSource(const Point& center, float scaleFactor, const Light& light)
+{
+    if(m_version == 1) {
+        addLightSourceV1(center, scaleFactor, light);
+    } else if(m_version == 2) {
+        addLightSourceV2(center, scaleFactor, light);
+    }
+}
+
+void LightView::addLightSourceV1(const Point& center, float scaleFactor, const Light& light)
+{
+    const int intensity = light.intensity;
+    const int radius = (intensity * Otc::TILE_PIXELS * scaleFactor) * 1.25;
+
+    Color color = Color::from8bit(light.color);
+
+    const float brightnessLevel = light.intensity > 1 ? 0.7 : 0.2f;
+    const float brightness = brightnessLevel + (intensity / static_cast<float>(MAX_LIGHT_INTENSITY)) * brightnessLevel;
+
+    color.setRed(color.rF() * brightness);
+    color.setGreen(color.gF() * brightness);
+    color.setBlue(color.bF() * brightness);
+
+    if(m_blendEquation == Painter::BlendEquation_Add && !m_lightMap.empty()) {
+        const LightSource prevSource = m_lightMap.back();
+        if(prevSource.center == center && prevSource.color == color && prevSource.radius == radius)
+            return;
+    }
+
+    LightSource source;
+    source.center = center;
+    source.color = color;
+    source.radius = radius;
+    m_lightMap.push_back(source);
+}
+
+void LightView::addLightSourceV2(const Point& center, float scaleFactor, const Light& light)
 {
     int intensity = light.intensity;
     if(light.intensity > MAX_LIGHT_INTENSITY) {
@@ -89,19 +136,20 @@ void LightView::addLightSource(const Position& pos, const Point& center, float s
     }
 
     const int radius = (Otc::TILE_PIXELS * scaleFactor) * 2.4;
-
-    Color color = Color::from8bit(light.color);
-
     const float brightnessLevel = light.intensity > 1 ? 0.5f : 0.2f;
     const float brightness = brightnessLevel + (intensity / static_cast<float>(MAX_LIGHT_INTENSITY)) * brightnessLevel;
-
-    color.setRed(color.rF() * brightness);
-    color.setGreen(color.gF() * brightness);
-    color.setBlue(color.bF() * brightness);
+    const auto& pos = m_mapView->getPosition(center, m_mapView->m_rect.size());
 
     const int s = std::floor(static_cast<float>(intensity) / 1.3);
     const int start = s * -1;
     const int diff = s / 2;
+
+    Color color = Color::from8bit(light.color);
+    color.setRed(color.rF() * brightness);
+    color.setGreen(color.gF() * brightness);
+    color.setBlue(color.bF() * brightness);
+
+    const auto& mapWidth = m_mapView->m_drawDimension.width();
 
     for(int x = start; x <= s; ++x) {
         for(int y = start; y <= s; ++y) {
@@ -112,9 +160,9 @@ void LightView::addLightSource(const Position& pos, const Point& center, float s
             if(absY > diff && absX > diff && (absY == absX || absX - diff == absY || absX == absY - diff || absX - diff == absY - diff)) continue;
 
             const auto& posLight = pos.translated(x, y);
-            const auto& point = m_mapView->transformPositionTo2D(posLight, m_mapView->getCameraPosition());
+            const auto& point = m_mapView->transformPositionTo2D(posLight);
 
-            size_t index = (point.y / Otc::TILE_PIXELS) * m_mapSize.width() + (point.x / Otc::TILE_PIXELS);
+            size_t index = (point.y / Otc::TILE_PIXELS) * mapWidth + (point.x / Otc::TILE_PIXELS);
             if(index >= m_lightMap.size()) continue;
 
             const TilePtr& tile = g_map.getTile(posLight);
@@ -159,21 +207,23 @@ void LightView::drawGlobalLight(const Light& light)
     g_painter->drawFilledRect(Rect(0, 0, m_lightbuffer->getSize()));
 }
 
-void LightView::drawLightSource(const Point& center, const Color& color, int radius)
+void LightView::drawLightSource(const LightSource& light)
 {
     // debug draw
     //radius /= 16;
 
-    const Rect dest = Rect(center - Point(radius, radius), Size(radius * 2, radius * 2));
-    g_painter->setColor(color);
+    const Rect dest = Rect(light.center - Point(light.radius, light.radius), Size(light.radius * 2, light.radius * 2));
+    g_painter->setColor(light.color);
     g_painter->drawTexturedRect(dest, m_lightTexture);
 }
 
-void LightView::resize(const Size& size, const Size& mapSize)
+void LightView::resize()
 {
-    m_lightbuffer->resize(size);
-    m_lightMap.resize(mapSize.area());
-    m_mapSize = mapSize;
+    m_lightbuffer->resize(m_mapView->m_frameCache.tile->getSize());
+
+    if(m_version == 2) {
+        m_lightMap.resize(m_mapView->m_drawDimension.area());
+    }
 }
 
 void LightView::draw(const Rect& dest, const Rect& src)
@@ -191,11 +241,18 @@ void LightView::draw(const Rect& dest, const Rect& src)
         g_painter->setBlendEquation(m_blendEquation);
         g_painter->setCompositionMode(Painter::CompositionMode_Add);
 
-        for(LightSource& source : m_lightMap) {
-            if(!source.pos.isValid())continue;
+        if(m_version == 1) {
+            for(const LightSource& source : m_lightMap)
+                drawLightSource(source);
 
-            drawLightSource(source.center, source.color, source.radius);
-            source.pos = Position();
+            m_lightMap.clear();
+        } else if(m_version == 2) {
+            for(LightSource& source : m_lightMap) {
+                if(!source.pos.isValid())continue;
+
+                drawLightSource(source);
+                source.pos = Position();
+            }
         }
 
         m_lightbuffer->release();

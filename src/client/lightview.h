@@ -44,8 +44,8 @@ public:
 
     void reset();
     void setGlobalLight(const Light& light);
-    void addLightSource(const Position& pos, const Point& center, float scaleFactor, const Light& light);
-    void resize(const Size& size, const Size& mapSize);
+    void addLightSource(const Point& center, float scaleFactor, const Light& light);
+    void resize();
     void draw(const Rect& dest, const Rect& src);
 
     void setBlendEquation(Painter::BlendEquation blendEquation) { m_blendEquation = blendEquation; }
@@ -57,12 +57,14 @@ public:
     uint8 getVersion() const { return m_version; }
 
 private:
+    void addLightSourceV1(const Point& center, float scaleFactor, const Light& light);
+    void addLightSourceV2(const Point& center, float scaleFactor, const Light& light);
     void drawGlobalLight(const Light& light);
-    void drawLightSource(const Point& center, const Color& color, int radius);
+    void drawLightSource(const LightSource& light);
 
     Light m_globalLight;
 
-    TexturePtr generateLightBubble(float centerFactor);
+    TexturePtr generateLightBubble();
     TexturePtr m_lightTexture;
 
     Painter::BlendEquation m_blendEquation;
@@ -70,7 +72,6 @@ private:
     FrameBufferPtr m_lightbuffer;
 
     std::vector<LightSource> m_lightMap;
-    Size m_mapSize;
     MapViewPtr m_mapView;
 
     uint8 m_version;

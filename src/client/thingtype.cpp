@@ -476,7 +476,7 @@ void ThingType::draw(const Position& pos, const Point& dest, float scaleFactor, 
     if(lightView && hasLight() && frameFlags & Otc::FUpdateLight) {
         const Light light = getLight();
         if(light.intensity > 0)
-            lightView->addLightSource(pos, screenRect.center(), scaleFactor, light);
+            lightView->addLightSource(screenRect.center(), scaleFactor, light);
     }
 }
 

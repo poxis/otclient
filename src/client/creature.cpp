@@ -105,7 +105,7 @@ void Creature::draw(const Point& dest, float scaleFactor, bool animate, const Hi
         }
 
         if(light.intensity > 0) {
-            lightView->addLightSource(m_position, dest + (m_walkOffset + Point(16, 16)) * scaleFactor, scaleFactor, light);
+            lightView->addLightSource(dest /*+ (m_walkOffset + Point(16, 16)) * scaleFactor*/, scaleFactor, light);
         }
     }
 }
