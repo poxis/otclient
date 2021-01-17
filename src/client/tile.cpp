@@ -115,14 +115,12 @@ void Tile::drawThing(const ThingPtr& thing, const Point& dest, float scaleFactor
 {
     if(m_completelyCovered) {
         frameFlag = Otc::FUpdateLight;
-    }
-
-    /*if(isCovered()) {
+    } else if(isCovered()) {
         if(thing->isCreature() && !isWalkable(true)) {
             const auto& tile = thing->getTile();
             if(!tile || tile->isCovered()) lightView = nullptr;
         } else lightView = nullptr;
-    }*/
+    }
 
     const auto putShadowColor = g_painter->getColor() == m_borderShadowColor && (!thing->isGroundBorder() && !thing->isTall());
 

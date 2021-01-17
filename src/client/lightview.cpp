@@ -56,7 +56,7 @@ TexturePtr LightView::generateLightBubble(float centerFactor)
 
             // light intensity varies inversely with the square of the distance
             intensity *= intensity;
-            const uint8_t colorByte = std::min<int>(intensity * 0xB4, 50);
+            const uint8_t colorByte = intensity * 70;
 
             uint8_t pixel[4] = { colorByte, colorByte, colorByte, 0xff };
             lightImage->setPixel(x, y, pixel);
@@ -80,19 +80,24 @@ void LightView::setGlobalLight(const Light& light)
 
 void LightView::addLightSource(const Position& pos, const Point& center, float scaleFactor, const Light& light)
 {
-    const int intensity = std::min<int>(light.intensity, MAX_LIGHT_INTENSITY);
-    const int radius = (Otc::TILE_PIXELS * scaleFactor) * 2;
+    int intensity = light.intensity;
+    if(light.intensity > MAX_LIGHT_INTENSITY) {
+        const auto& awareRange = m_mapView->m_awareRange;
+        intensity = std::max<int>(awareRange.right, awareRange.bottom);
+    }
+
+    const int radius = (Otc::TILE_PIXELS * scaleFactor) * 2.5;
 
     Color color = Color::from8bit(light.color);
 
-    const float brightnessLevel = light.intensity > 1 ? 0.7 : 0.2f;
+    const float brightnessLevel = light.intensity > 1 ? 0.5f : 0.2f;
     const float brightness = brightnessLevel + (intensity / static_cast<float>(MAX_LIGHT_INTENSITY)) * brightnessLevel;
 
     color.setRed(color.rF() * brightness);
     color.setGreen(color.gF() * brightness);
     color.setBlue(color.bF() * brightness);
 
-    const int s = std::floor(static_cast<float>(intensity) / 2);
+    const int s = std::floor(static_cast<float>(intensity) / 1.3);
     const int start = s * -1;
     const int diff = s / 2;
 
@@ -101,7 +106,7 @@ void LightView::addLightSource(const Position& pos, const Point& center, float s
             const int absY = std::abs(y);
             const int absX = std::abs(x);
 
-            if(absX == s && absY == 1 || absY == s && absX == 1) continue;
+            if(absX == s && absY >= 1 || absY == s && absX >= 1) continue;
             if(absY > diff && absX > diff && (absY == absX || absX - diff == absY || absX == absY - diff || absX - diff == absY - diff)) continue;
 
             const auto& posLight = pos.translated(x, y);
@@ -111,22 +116,26 @@ void LightView::addLightSource(const Position& pos, const Point& center, float s
             if(index >= m_lightMap.size()) continue;
 
             const TilePtr& tile = g_map.getTile(posLight);
-            if(!tile || tile->isCovered()) continue;
+            if(!tile || tile->isCovered() || tile->isTopGround() && !tile->hasBottomToDraw()) continue;
 
-            if(m_blendEquation == Painter::BlendEquation_Add) {
-                auto& light = m_lightMap[index];
-                if(light.pos.isValid()) {
-                    if(intensity > light.intensity)
-                        light.color = color;
+            auto& light = m_lightMap[index];
+            if(light.pos.isValid()) {
+                if(intensity > light.intensity)
+                    light.color = color;
 
-                    continue;
-                }
+                continue;
             }
 
             LightSource source2;
-            source2.center = center + ((Point(x, y) * (Otc::TILE_PIXELS - 4)));
+
+            int distance = Otc::TILE_PIXELS;
+            if(absX == s && absY == 0 || absY == s && absX == 0)
+                distance /= 1.2;
+
+            source2.center = center + ((Point(x, y) * distance));
             source2.color = color;
             source2.radius = radius;
+
             source2.pos = posLight;
             source2.intensity = intensity;
             m_lightMap[index] = source2;

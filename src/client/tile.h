@@ -122,7 +122,7 @@ public:
     bool hasElevation(int elevation = 1);
     void overwriteMinimapColor(uint8 color) { m_minimapColor = color; }
 
-    bool isCompletelyCovered(int firstFloor);
+    bool isCompletelyCovered(int firstFloor = -1);
 
     void remFlag(uint32 flag) { m_flags &= ~flag; }
     void setFlag(uint32 flag) { m_flags |= flag; }
