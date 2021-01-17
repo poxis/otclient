@@ -466,7 +466,7 @@ void MapView::updateGeometry(const Size& visibleDimension, const Size& optimized
 
     m_frameCache.tile->resize(bufferSize);
     m_frameCache.crosshair->resize(bufferSize);
-    if(m_drawLights) m_lightView->resize(bufferSize);
+    if(m_drawLights) m_lightView->resize(bufferSize, m_drawDimension);
 
     m_frameCache.staticText->resize(g_graphics.getViewportSize());
     m_frameCache.creatureInformation->resize(g_graphics.getViewportSize());
@@ -834,8 +834,8 @@ void MapView::setDrawLights(bool enable)
     if(enable == m_drawLights) return;
 
     if(enable) {
-        m_lightView = LightViewPtr(new LightView);
-        m_lightView->resize(m_frameCache.tile->getSize());
+        m_lightView = LightViewPtr(new LightView(this));
+        m_lightView->resize(m_frameCache.tile->getSize(), m_drawDimension);
     } else m_lightView = nullptr;
 
     m_drawLights = enable;
@@ -1015,7 +1015,7 @@ void MapView::drawSeparately(const int floor, const ViewPort& viewPort, LightVie
         tile->drawTop(pos2d, m_scaleFactor, m_frameCache.flags, lightView);
 
         if(!tile->hasGroundToDraw()) tile->drawEnd(this);
-}
+    }
 }
 #endif
 /* vim: set ts=4 sw=4 et: */

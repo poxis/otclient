@@ -73,6 +73,7 @@ protected:
 
     friend class Map;
     friend class Tile;
+    friend class LightView;
 
 public:
     // floor visibility related

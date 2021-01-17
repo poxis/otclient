@@ -34,17 +34,18 @@ struct LightSource {
     Point center;
     int radius;
     Position pos;
+    uint8_t intensity;
 };
 
 class LightView : public LuaObject
 {
 public:
-    LightView();
+    LightView(const MapViewPtr& mapView);
 
     void reset();
     void setGlobalLight(const Light& light);
     void addLightSource(const Position& pos, const Point& center, float scaleFactor, const Light& light);
-    void resize(const Size& size);
+    void resize(const Size& size, const Size& mapSize);
     void draw(const Rect& dest, const Rect& src);
 
     void setBlendEquation(Painter::BlendEquation blendEquation) { m_blendEquation = blendEquation; }
@@ -67,6 +68,8 @@ private:
     FrameBufferPtr m_lightbuffer;
 
     std::vector<LightSource> m_lightMap;
+    Size m_mapSize;
+    MapViewPtr m_mapView;
 };
 
 #endif
