@@ -118,27 +118,32 @@ void LightView::addLightSource(const Position& pos, const Point& center, float s
             const TilePtr& tile = g_map.getTile(posLight);
             if(!tile || tile->isCovered() || tile->isTopGround() && !tile->hasBottomToDraw()) continue;
 
-            auto& light = m_lightMap[index];
-            if(light.pos.isValid()) {
-                if(intensity > light.intensity)
-                    light.color = color;
-
-                continue;
-            }
-
-            LightSource source2;
+            /*if(!tile->isLookPossible()) {
+                break;
+            }*/
 
             int distance = Otc::TILE_PIXELS;
             if(absX == s && absY == 0 || absY == s && absX == 0)
                 distance /= 1.2;
 
-            source2.center = center + ((Point(x, y) * distance));
-            source2.color = color;
-            source2.radius = radius;
+            const auto& newCenter = center + ((Point(x, y) * distance));
 
-            source2.pos = posLight;
-            source2.intensity = intensity;
-            m_lightMap[index] = source2;
+            auto& light = m_lightMap[index];
+            if(light.pos.isValid()) {
+                if(intensity > light.intensity) {
+                    light.color = color;
+                    light.center = newCenter;
+                }
+                continue;
+            }
+
+            LightSource source;
+            source.center = newCenter;
+            source.color = color;
+            source.radius = radius;
+            source.pos = posLight;
+            source.intensity = intensity;
+            m_lightMap[index] = source;
         }
     }
 }
