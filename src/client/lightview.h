@@ -40,7 +40,7 @@ struct LightSource {
 class LightView : public LuaObject
 {
 public:
-    LightView(const MapViewPtr& mapView);
+    LightView(const MapViewPtr& mapView, const uint8 version);
 
     void reset();
     void setGlobalLight(const Light& light);
@@ -53,6 +53,8 @@ public:
     bool canUpdate() const { return isDark() && m_lightbuffer->canUpdate(); }
 
     bool isDark() const { return m_globalLight.intensity < 250; }
+
+    uint8 getVersion() const { return m_version; }
 
 private:
     void drawGlobalLight(const Light& light);
@@ -70,6 +72,8 @@ private:
     std::vector<LightSource> m_lightMap;
     Size m_mapSize;
     MapViewPtr m_mapView;
+
+    uint8 m_version;
 };
 
 #endif

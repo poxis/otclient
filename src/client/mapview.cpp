@@ -834,7 +834,7 @@ void MapView::setDrawLights(bool enable)
     if(enable == m_drawLights) return;
 
     if(enable) {
-        m_lightView = LightViewPtr(new LightView(this));
+        m_lightView = LightViewPtr(new LightView(this, 2));
         m_lightView->resize(m_frameCache.tile->getSize(), m_drawDimension);
     } else m_lightView = nullptr;
 

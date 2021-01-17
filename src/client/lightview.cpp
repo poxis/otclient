@@ -33,12 +33,14 @@ enum {
     MAX_AMBIENT_LIGHT_INTENSITY = 255
 };
 
-LightView::LightView(const MapViewPtr& mapView)
+LightView::LightView(const MapViewPtr& mapView, const uint8 version)
 {
     m_lightbuffer = g_framebuffers.createFrameBuffer();
     m_lightTexture = generateLightBubble(.0f);
     m_blendEquation = Painter::BlendEquation_Add;
     m_mapView = mapView;
+    m_version = version;
+
     reset();
 }
 
@@ -86,7 +88,7 @@ void LightView::addLightSource(const Position& pos, const Point& center, float s
         intensity = std::max<int>(awareRange.right, awareRange.bottom);
     }
 
-    const int radius = (Otc::TILE_PIXELS * scaleFactor) * 2.5;
+    const int radius = (Otc::TILE_PIXELS * scaleFactor) * 2.4;
 
     Color color = Color::from8bit(light.color);
 
@@ -116,19 +118,16 @@ void LightView::addLightSource(const Position& pos, const Point& center, float s
             if(index >= m_lightMap.size()) continue;
 
             const TilePtr& tile = g_map.getTile(posLight);
-            if(!tile || tile->isCovered() || tile->isTopGround() && !tile->hasBottomToDraw()) continue;
-
-            /*if(!tile->isLookPossible()) {
-                break;
-            }*/
+            auto& light = m_lightMap[index];
+            if(!tile || tile->isCovered() || tile->isTopGround() && !tile->hasBottomToDraw()) {
+                continue;
+            }
 
             int distance = Otc::TILE_PIXELS;
             if(absX == s && absY == 0 || absY == s && absX == 0)
                 distance /= 1.2;
 
             const auto& newCenter = center + ((Point(x, y) * distance));
-
-            auto& light = m_lightMap[index];
             if(light.pos.isValid()) {
                 if(intensity > light.intensity) {
                     light.color = color;
