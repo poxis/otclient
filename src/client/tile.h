@@ -207,6 +207,7 @@ private:
     Color m_borderShadowColor;
 
     stdext::boolean<false> m_covered;
+    stdext::boolean<false> m_completelyCovered;
 };
 
 #endif

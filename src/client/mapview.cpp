@@ -388,7 +388,7 @@ void MapView::updateVisibleTilesCache()
                         continue;
 
                     // skip tiles that are completely behind another tile
-                    if(tile->isCompletelyCovered(m_cachedFirstVisibleFloor))
+                    if(tile->isCompletelyCovered(m_cachedFirstVisibleFloor) && !tile->hasLight())
                         continue;
 
                     floor.push_back(tile);
