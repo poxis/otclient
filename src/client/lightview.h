@@ -65,9 +65,9 @@ private:
     void addLightSourceV2(const Position& pos, const Point& center, float scaleFactor, const Light& light, const ThingPtr& thing);
     void drawGlobalLight(const Light& light);
     void drawLightSource(const LightSource& light);
-    bool canDrawLight(const Position& pos);
+    bool canDraw(const Position& pos);
 
-    std::vector<std::pair<int8_t, int8_t>> getDimensionCache(const uint8 intensity);
+    std::vector<std::pair<int8_t, int8_t>> getDimensions(const uint8 intensity);
 
     Light m_globalLight;
 

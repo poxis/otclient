@@ -135,17 +135,11 @@ void LightView::addLightSourceV2(const Position& pos, const Point& center, float
         intensity = std::max<int>(awareRange.right, awareRange.bottom) + 2;
     }
 
-    const int radius = (Otc::TILE_PIXELS * scaleFactor) * 2.5,
-        s = std::floor(static_cast<float>(intensity) / 1.3),
-        start = s * -1,
-        middle = s / 2;
-
+    const int radius = (Otc::TILE_PIXELS * scaleFactor) * 2.5;
     const float brightnessLevel = light.intensity > 1 ? 0.5f : 0.2f;
     const float brightness = brightnessLevel + (intensity / static_cast<float>(MAX_LIGHT_INTENSITY)) * brightnessLevel;
+    const Position& posTile = pos.isValid() ? pos : m_mapView->getPosition(center, m_mapView->m_srcRect.size());
     const Point& moveOffset = thing && thing->isCreature() ? thing->static_self_cast<Creature>()->getWalkOffset() : Point();
-
-    const bool dynamicPos = !pos.isValid();
-    const auto posTile = dynamicPos ? m_mapView->getPosition(center, m_mapView->m_srcRect.size()) : pos;
 
     Color color = Color::from8bit(light.color);
     color.setRed(color.rF() * brightness);
@@ -160,9 +154,7 @@ void LightView::addLightSourceV2(const Position& pos, const Point& center, float
 
         auto posLight = posTile.translated(x, y);
         const int index = getLightSourceIndex(posLight);
-        if(index == -1 || !canDrawLight(posLight)) continue;
-
-        //const auto point = dynamicPos ? m_mapView->transformPositionTo2D(posLight, m_mapView->getCameraPosition()) : center;
+        if(index == -1 || !canDraw(posLight)) continue;
         const auto& newCenter = center + ((Point(x, y) * Otc::TILE_PIXELS));
 
         auto& lightSource = m_lightMap[index];
@@ -178,10 +170,10 @@ void LightView::addLightSourceV2(const Position& pos, const Point& center, float
         if(!moveOffset.isNull()) {
             const CreaturePtr& c = thing->static_self_cast<Creature>();
             Position posCheck = posLight.translatedToDirection(c->getDirection());
-            if(!canDrawLight(posCheck)) _moveOffset = Point();
+            if(!canDraw(posCheck)) _moveOffset = Point();
             else {
                 posCheck = posLight.translatedToReverseDirection(c->getDirection());
-                if(!canDrawLight(posCheck)) _moveOffset = Point();
+                if(!canDraw(posCheck)) _moveOffset = Point();
             }
         }
 
@@ -197,19 +189,19 @@ std::vector<std::pair<int8_t, int8_t>> LightView::getDimensionCache(const uint8 
 {
     auto& dimension = m_dimensionCache[intensity];
     if(dimension.empty()) {
-        const int s = std::floor(static_cast<float>(intensity) / 1.3),
-            start = s * -1,
-            middle = s / 2;
+        const int size = std::floor(static_cast<float>(intensity) / 1.3),
+            start = size * -1,
+            middle = size / 2;
 
-        for(int x = start; x <= s; ++x) {
-            for(int y = start; y <= s; ++y) {
+        for(int x = start; x <= size; ++x) {
+            for(int y = start; y <= size; ++y) {
                 const int absY = std::abs(y);
                 const int absX = std::abs(x);
 
-                if(absX == s && absY >= 1 || absY == s && absX >= 1) continue;
+                if(absX == size && absY >= 1 || absY == size && absX >= 1) continue;
                 if(absY > middle && absX > middle && (
                     absY == absX || absX - middle == absY || absX == absY - middle || absX - middle == absY - middle
-                    ) || absX == s && absY == 0 || absY == s && absX == 0) continue;
+                    ) || absX == size && absY == 0 || absY == size && absX == 0) continue;
 
                 dimension.push_back(std::make_pair(x, y));
             }
@@ -229,7 +221,7 @@ int LightView::getLightSourceIndex(const Position& pos)
     return index;
 }
 
-bool LightView::canDrawLight(const Position& pos)
+bool LightView::canDraw(const Position& pos)
 {
     TilePtr tile = g_map.getTile(pos);
     if(!tile || tile->isCovered() || tile->isTopGround() && !tile->hasBottomToDraw() || tile->isBlockLight()) {
