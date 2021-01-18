@@ -475,8 +475,13 @@ void ThingType::draw(const Position& pos, const Point& dest, float scaleFactor, 
 
     if(lightView && hasLight() && frameFlags & Otc::FUpdateLight) {
         const Light light = getLight();
-        if(light.intensity > 0)
-            lightView->addLightSource(pos, screenRect.center(), scaleFactor, light);
+        if(light.intensity > 0) {
+            auto _pos = pos;
+            if(getCategory() == ThingCategoryMissile)
+                _pos = Position();
+
+            lightView->addLightSource(_pos, screenRect.center(), scaleFactor, light);
+        }
     }
 }
 

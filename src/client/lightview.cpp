@@ -150,6 +150,9 @@ void LightView::addLightSourceV2(const Position& pos, const Point& center, float
     color.setGreen(color.gF() * brightness);
     color.setBlue(color.bF() * brightness);
 
+    const bool dynamicPos = !pos.isValid();
+    const auto posTile = dynamicPos ? m_mapView->getPosition(center, m_mapView->m_srcRect.size()) : pos;
+
     for(int x = start; x <= s; ++x) {
         for(int y = start; y <= s; ++y) {
             const int absY = std::abs(y);
@@ -160,7 +163,7 @@ void LightView::addLightSourceV2(const Position& pos, const Point& center, float
                 absY == absX || absX - middle == absY || absX == absY - middle || absX - middle == absY - middle
                 )) continue;
 
-            auto& posLight = pos.translated(x, y);
+            auto& posLight = posTile.translated(x, y);
             const int index = getLightSourceIndex(posLight);
             if(index == -1 || !canDrawLight(posLight)) continue;
 
@@ -168,6 +171,7 @@ void LightView::addLightSourceV2(const Position& pos, const Point& center, float
             if(absX == s && absY == 0 || absY == s && absX == 0)
                 distance /= 1.2;
 
+            const auto& point = dynamicPos ? m_mapView->transformPositionTo2D(posLight, m_mapView->getCameraPosition()) : center;
             const auto& newCenter = center + ((Point(x, y) * distance));
 
             auto& lightSource = m_lightMap[index];
