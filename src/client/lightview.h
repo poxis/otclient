@@ -67,6 +67,8 @@ private:
     void drawLightSource(const LightSource& light);
     bool canDrawLight(const Position& pos);
 
+    std::vector<std::pair<int8_t, int8_t>> getDimensionCache(const uint8 intensity);
+
     Light m_globalLight;
 
     TexturePtr generateLightBubble();
@@ -77,6 +79,7 @@ private:
     FrameBufferPtr m_lightbuffer;
 
     std::vector<LightSource> m_lightMap;
+    std::array<std::vector<std::pair<int8_t, int8_t>>, 255> m_dimensionCache;
     MapViewPtr m_mapView;
 
     int getLightSourceIndex(const Position& pos);

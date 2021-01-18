@@ -108,7 +108,7 @@ public:
     Position getCameraPosition();
     void setCameraPosition(const Position& pos);
 
-    void setMinimumAmbientLight(float intensity) { m_minimumAmbientLight = intensity; schedulePainting(Otc::FUpdateLight); }
+    void setMinimumAmbientLight(float intensity) { m_minimumAmbientLight = intensity; updateLight(); }
     float getMinimumAmbientLight() { return m_minimumAmbientLight; }
 
     // drawing related

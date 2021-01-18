@@ -865,7 +865,7 @@ void Tile::analyzeThing(const ThingPtr& thing, bool add)
         m_countFlag.hasTopGround += value;
 
     if(thing->isGroundBorder() && thing->isNotWalkable())
-        m_countFlag.hasBlockLight += value;
+        m_countFlag.hasNoWalkableEdge += value;
 
     // Check that the item is opaque, so that it does not draw anything that is less than or equal below it.
     if(thing->isOpaque() && !thing->isOnTop() && !thing->isGround() && !thing->isGroundBorder()) {
