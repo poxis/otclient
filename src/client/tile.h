@@ -155,6 +155,7 @@ public:
     const bool hasBorderShadowColor() { return m_borderShadowColor != Color::white; }
 
     const bool isCovered() { return m_covered; };
+    const bool isBlockLight() { return m_countFlag.hasBlockLight > 0; };
 
 private:
     struct CountFlag {
@@ -174,6 +175,7 @@ private:
         int hasHookEast = 0;
         int hasHookSouth = 0;
         int hasTopGround = 0;
+        int hasBlockLight = 0;
     };
 
     void checkForDetachableThing();

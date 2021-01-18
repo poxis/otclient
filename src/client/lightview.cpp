@@ -215,10 +215,13 @@ int LightView::getLightSourceIndex(const Position& pos)
 
 bool LightView::canDrawLight(const Position& pos)
 {
-    const TilePtr& tile = g_map.getTile(pos);
+    TilePtr tile = g_map.getTile(pos);
     if(!tile || tile->isCovered() || tile->isTopGround() && !tile->hasBottomToDraw()) {
         return false;
     }
+
+    tile = g_map.getTile(pos.translated(1, 1, -1));
+    if(tile && tile->isBlockLight()) return false;
 
     return true;
 }
