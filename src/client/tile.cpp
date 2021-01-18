@@ -864,9 +864,6 @@ void Tile::analyzeThing(const ThingPtr& thing, bool add)
     if(thing->isTopGround())
         m_countFlag.hasTopGround += value;
 
-    if(thing->isTopGround())
-        m_countFlag.hasTopGround += value;
-
     if(thing->isGroundBorder() && thing->isNotWalkable())
         m_countFlag.hasBlockLight += value;
 
