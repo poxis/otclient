@@ -291,7 +291,7 @@ void PainterOGL::updateGlBlendEquation()
     else if(m_blendEquation == BlendEquation_Max)
         glBlendEquation(0x8008); // GL_MAX
     else if(m_blendEquation == BlendEquation_Min)
-        glBlendEquation(0x8458); // GL_MIN
+        glBlendEquation(0x8007); // GL_MIN
     else if(m_blendEquation == BlendEquation_Subtract)
         glBlendEquation(0x800A); // GL_FUNC_SUBTRACT
     else if(m_blendEquation == BlendEquation_Rever_Subtract)

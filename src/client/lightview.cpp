@@ -68,7 +68,7 @@ TexturePtr LightView::generateLightBubble()
             float intensity = stdext::clamp<float>((bubbleRadius - radius) / static_cast<float>(bubbleRadius - centerRadius), .0f, 1.0f);
             // light intensity varies inversely with the square of the distance
             intensity *= intensity;
-            if(m_version > 1) intensity = std::min<float>(intensity, 0.5);
+            if(m_version > 1) intensity = std::min<float>(intensity, 0.6);
             const uint8_t colorByte = intensity * intensityVariant;
 
             uint8_t pixel[4] = { colorByte, colorByte, colorByte, 0xff };
@@ -141,8 +141,8 @@ void LightView::addLightSourceV2(const Position& pos, const Point& center, float
         intensity = std::max<int>(awareRange.right, awareRange.bottom) + 2;
     }
 
-    const int radius = (Otc::TILE_PIXELS * scaleFactor) * 2.4;
-    const float brightnessLevel = 0.2;
+    const int radius = (Otc::TILE_PIXELS * scaleFactor) * 2.5;
+    const float brightnessLevel = 0.1;
     const float brightness = brightnessLevel + (intensity / static_cast<float>(MAX_LIGHT_INTENSITY)) * brightnessLevel;
     const Position& posTile = pos.isValid() ? pos : m_mapView->getPosition(center, m_mapView->m_srcRect.size());
     const Point& cleanPoint = Point(16, 16) * scaleFactor;
@@ -150,9 +150,11 @@ void LightView::addLightSourceV2(const Position& pos, const Point& center, float
 
     Point& moveOffset = Point();
     CreaturePtr creature;
+    bool isMoving = false;
     if(thing && thing->isCreature()) {
         creature = thing->static_self_cast<Creature>();
-        moveOffset = (creature->getWalkOffset() + Point(16, 16)) * scaleFactor;
+        if(!creature->getWalkOffset().isNull()) isMoving = true;
+        moveOffset = (creature->getWalkOffset() + Point(15, 15)) * scaleFactor;
     }
 
     Color color = Color::from8bit(light.color);
@@ -171,59 +173,23 @@ void LightView::addLightSourceV2(const Position& pos, const Point& center, float
         if(index == -1 || !canDraw(posLight)) {
             continue;
         }
+
         const auto& newCenter = center + ((Point(x, y) * Otc::TILE_PIXELS) * scaleFactor);
 
-        auto& lightSource = m_lightMap[index].first;
-        /*auto& staticLight = lightSource.first;
-        auto& movingLight = lightSource.second;*/
+        LightSource light;
+        light.center = newCenter + moveOffset;
+        light.color = color;
+        light.radius = radius;
+        light.pos = posLight;
+        light.intensity = intensity;
 
-        if(lightSource.hasLight()) {
-            if(intensity > lightSource.intensity)
-                lightSource.color = color;
+        auto& lightSource = m_lightMap[index];
 
-            continue;
+        if(lightSource.first.hasLight()) {
+            lightSource.second = light;
+        } else {
+            lightSource.first = light;
         }
-
-        Point _moveOffset = moveOffset;
-        /*if(creature) {
-            //g_logger.info(std::to_string(creature->get));
-            if(!moveOffset.isNull()) {
-                Position posCheck = posLight.translatedToDirection(creature->getDirection());
-                if(!canDraw(posCheck)) _moveOffset = cleanPoint;
-                else {
-                    index = getLightSourceIndex(posCheck);
-                    if(index > -1) {
-                        const auto& nextLightSource = m_lightMap[index].first;
-                        if(nextLightSource.color != color)
-                            _moveOffset = cleanPoint;
-                    }
-                }
-            }
-
-            if(!_moveOffset.isNull()) {
-                Position posCheck = posLight.translatedToReverseDirection(creature->getDirection());
-                if(!canDraw(posCheck))_moveOffset = cleanPoint;
-                else {
-                    index = getLightSourceIndex(posCheck);
-                    if(index > -1) {
-                        const auto& nextLightSource = m_lightMap[index].first;
-                        if(nextLightSource.color == color)
-                            _moveOffset = cleanPoint;
-                    }
-                }
-            }
-        }*/
-
-        /*    LightSource & source = staticLight;
-        if(moveOffset.isNull()) {
-            movingLight.reset();
-        } else source = movingLight;*/
-
-        lightSource.center = newCenter + _moveOffset;
-        lightSource.color = color;
-        lightSource.radius = radius;
-        lightSource.pos = posLight;
-        lightSource.intensity = intensity;
     }
 }
 
@@ -331,10 +297,15 @@ void LightView::draw(const Rect& dest, const Rect& src)
             m_lightMap.clear();
         } else if(m_version == 2) {
             for(std::pair<LightSource, LightSource>& source : m_lightMap) {
-                if(!source.first.pos.isValid()) continue;
+                if(source.first.pos.isValid()) {
+                    drawLightSource(source.first);
+                    source.first.reset();
+                }
 
-                drawLightSource(source.first);
-                source.first.reset();
+                if(source.second.pos.isValid()) {
+                    drawLightSource(source.second);
+                    source.second.reset();
+                }
             }
         }
 
