@@ -78,7 +78,7 @@ private:
 
     FrameBufferPtr m_lightbuffer;
 
-    std::vector<LightSource> m_lightMap;
+    std::vector<std::pair<LightSource, LightSource>> m_lightMap;
     std::array<std::vector<std::pair<int8_t, int8_t>>, 255> m_dimensionCache;
     MapViewPtr m_mapView;
 

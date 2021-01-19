@@ -54,7 +54,7 @@ TexturePtr LightView::generateLightBubble()
         intensityVariant = 0xB4;
     } else {
         centerFactor = .0f;
-        intensityVariant = 0x46;
+        intensityVariant = 0xff;
     }
 
     const int bubbleRadius = 256;
@@ -65,10 +65,10 @@ TexturePtr LightView::generateLightBubble()
     for(int x = 0; x < bubbleDiameter; ++x) {
         for(int y = 0; y < bubbleDiameter; ++y) {
             const float radius = std::sqrt((bubbleRadius - x) * (bubbleRadius - x) + (bubbleRadius - y) * (bubbleRadius - y));
-            float intensity = stdext::clamp<float>((bubbleRadius - radius) / static_cast<float>(bubbleRadius - centerRadius), 0.0f, 1.0f);
-
+            float intensity = stdext::clamp<float>((bubbleRadius - radius) / static_cast<float>(bubbleRadius - centerRadius), .0f, 1.0f);
             // light intensity varies inversely with the square of the distance
             intensity *= intensity;
+            if(m_version > 1) intensity = std::min<float>(intensity, 0.5);
             const uint8_t colorByte = intensity * intensityVariant;
 
             uint8_t pixel[4] = { colorByte, colorByte, colorByte, 0xff };
@@ -94,7 +94,13 @@ void LightView::setGlobalLight(const Light& light)
 void LightView::addLightSource(const Position& pos, const Point& center, float scaleFactor, const Light& light, const ThingPtr& thing)
 {
     if(m_version == 1) {
-        addLightSourceV1(center, scaleFactor, light);
+        Point& walkOffset = Point();
+        if(thing && thing->isCreature()) {
+            const CreaturePtr& c = thing->static_self_cast<Creature>();
+            walkOffset = c->getWalkOffset();
+        }
+
+        addLightSourceV1(center + (walkOffset + Point(16, 16)) * scaleFactor, scaleFactor, light);
     } else if(m_version == 2) {
         addLightSourceV2(pos, center, scaleFactor, light, thing);
     }
@@ -103,11 +109,11 @@ void LightView::addLightSource(const Position& pos, const Point& center, float s
 void LightView::addLightSourceV1(const Point& center, float scaleFactor, const Light& light)
 {
     const int intensity = light.intensity;
-    const int radius = (intensity * Otc::TILE_PIXELS * scaleFactor) * 1.25;
+    const int radius = (intensity * Otc::TILE_PIXELS * scaleFactor) * 2.5;
 
     Color color = Color::from8bit(light.color);
 
-    const float brightnessLevel = light.intensity > 1 ? 0.7 : 0.2f;
+    const float brightnessLevel = intensity > 1 ? 0.7 : 0.2f;
     const float brightness = brightnessLevel + (intensity / static_cast<float>(MAX_LIGHT_INTENSITY)) * brightnessLevel;
 
     color.setRed(color.rF() * brightness);
@@ -115,8 +121,8 @@ void LightView::addLightSourceV1(const Point& center, float scaleFactor, const L
     color.setBlue(color.bF() * brightness);
 
     if(m_blendEquation == Painter::BlendEquation_Add && !m_lightMap.empty()) {
-        const LightSource prevSource = m_lightMap.back();
-        if(prevSource.center == center && prevSource.color == color && prevSource.radius == radius)
+        const std::pair< LightSource, LightSource> prevSource = m_lightMap.back();
+        if(prevSource.first.center == center && prevSource.first.color == color && prevSource.first.radius == radius)
             return;
     }
 
@@ -124,7 +130,7 @@ void LightView::addLightSourceV1(const Point& center, float scaleFactor, const L
     source.center = center;
     source.color = color;
     source.radius = radius;
-    m_lightMap.push_back(source);
+    m_lightMap.push_back(std::make_pair(source, LightSource()));
 }
 
 void LightView::addLightSourceV2(const Position& pos, const Point& center, float scaleFactor, const Light& light, const ThingPtr& thing)
@@ -135,47 +141,83 @@ void LightView::addLightSourceV2(const Position& pos, const Point& center, float
         intensity = std::max<int>(awareRange.right, awareRange.bottom) + 2;
     }
 
-    const int radius = (Otc::TILE_PIXELS * scaleFactor) * 2.5;
-    const float brightnessLevel = light.intensity > 1 ? 0.5f : 0.2f;
+    const int radius = (Otc::TILE_PIXELS * scaleFactor) * 2.4;
+    const float brightnessLevel = 0.2;
     const float brightness = brightnessLevel + (intensity / static_cast<float>(MAX_LIGHT_INTENSITY)) * brightnessLevel;
     const Position& posTile = pos.isValid() ? pos : m_mapView->getPosition(center, m_mapView->m_srcRect.size());
-    const Point& moveOffset = thing && thing->isCreature() ? thing->static_self_cast<Creature>()->getWalkOffset() : Point();
+    const Point& cleanPoint = Point(16, 16) * scaleFactor;
+
+
+    Point& moveOffset = Point();
+    CreaturePtr creature;
+    if(thing && thing->isCreature()) {
+        creature = thing->static_self_cast<Creature>();
+        moveOffset = (creature->getWalkOffset() + Point(16, 16)) * scaleFactor;
+    }
 
     Color color = Color::from8bit(light.color);
     color.setRed(color.rF() * brightness);
     color.setGreen(color.gF() * brightness);
     color.setBlue(color.bF() * brightness);
 
-    const auto& dimensions = getDimensionCache(intensity);
+    const auto& dimensions = getDimensions(intensity);
     for each(const auto dimension in dimensions)
     {
         const auto x = dimension.first;
         const auto y = dimension.second;
 
         auto posLight = posTile.translated(x, y);
-        const int index = getLightSourceIndex(posLight);
-        if(index == -1 || !canDraw(posLight)) continue;
-        const auto& newCenter = center + ((Point(x, y) * Otc::TILE_PIXELS));
+        int index = getLightSourceIndex(posLight);
+        if(index == -1 || !canDraw(posLight)) {
+            continue;
+        }
+        const auto& newCenter = center + ((Point(x, y) * Otc::TILE_PIXELS) * scaleFactor);
 
-        auto& lightSource = m_lightMap[index];
+        auto& lightSource = m_lightMap[index].first;
+        /*auto& staticLight = lightSource.first;
+        auto& movingLight = lightSource.second;*/
+
         if(lightSource.hasLight()) {
-            if(intensity > lightSource.intensity) {
+            if(intensity > lightSource.intensity)
                 lightSource.color = color;
-                lightSource.center = newCenter;
-            }
+
             continue;
         }
 
         Point _moveOffset = moveOffset;
-        if(!moveOffset.isNull()) {
-            const CreaturePtr& c = thing->static_self_cast<Creature>();
-            Position posCheck = posLight.translatedToDirection(c->getDirection());
-            if(!canDraw(posCheck)) _moveOffset = Point();
-            else {
-                posCheck = posLight.translatedToReverseDirection(c->getDirection());
-                if(!canDraw(posCheck)) _moveOffset = Point();
+        /*if(creature) {
+            //g_logger.info(std::to_string(creature->get));
+            if(!moveOffset.isNull()) {
+                Position posCheck = posLight.translatedToDirection(creature->getDirection());
+                if(!canDraw(posCheck)) _moveOffset = cleanPoint;
+                else {
+                    index = getLightSourceIndex(posCheck);
+                    if(index > -1) {
+                        const auto& nextLightSource = m_lightMap[index].first;
+                        if(nextLightSource.color != color)
+                            _moveOffset = cleanPoint;
+                    }
+                }
             }
-        }
+
+            if(!_moveOffset.isNull()) {
+                Position posCheck = posLight.translatedToReverseDirection(creature->getDirection());
+                if(!canDraw(posCheck))_moveOffset = cleanPoint;
+                else {
+                    index = getLightSourceIndex(posCheck);
+                    if(index > -1) {
+                        const auto& nextLightSource = m_lightMap[index].first;
+                        if(nextLightSource.color == color)
+                            _moveOffset = cleanPoint;
+                    }
+                }
+            }
+        }*/
+
+        /*    LightSource & source = staticLight;
+        if(moveOffset.isNull()) {
+            movingLight.reset();
+        } else source = movingLight;*/
 
         lightSource.center = newCenter + _moveOffset;
         lightSource.color = color;
@@ -185,7 +227,7 @@ void LightView::addLightSourceV2(const Position& pos, const Point& center, float
     }
 }
 
-std::vector<std::pair<int8_t, int8_t>> LightView::getDimensionCache(const uint8 intensity)
+std::vector<std::pair<int8_t, int8_t>> LightView::getDimensions(const uint8 intensity)
 {
     auto& dimension = m_dimensionCache[intensity];
     if(dimension.empty()) {
@@ -283,16 +325,16 @@ void LightView::draw(const Rect& dest, const Rect& src)
         g_painter->setCompositionMode(Painter::CompositionMode_Add);
 
         if(m_version == 1) {
-            for(const LightSource& source : m_lightMap)
-                drawLightSource(source);
+            for(const std::pair<LightSource, LightSource>& source : m_lightMap)
+                drawLightSource(source.first);
 
             m_lightMap.clear();
         } else if(m_version == 2) {
-            for(LightSource& source : m_lightMap) {
-                if(!source.pos.isValid())continue;
+            for(std::pair<LightSource, LightSource>& source : m_lightMap) {
+                if(!source.first.pos.isValid()) continue;
 
-                drawLightSource(source);
-                source.reset();
+                drawLightSource(source.first);
+                source.first.reset();
             }
         }
 
