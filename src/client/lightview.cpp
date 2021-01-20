@@ -20,6 +20,8 @@
  * THE SOFTWARE.
  */
 
+#define DEBUG_BUBBLE 0
+
 #include "lightview.h"
 #include <framework/graphics/framebuffer.h>
 #include <framework/graphics/framebuffermanager.h>
@@ -141,21 +143,38 @@ void LightView::addLightSourceV2(const Position& pos, const Point& center, float
         intensity = std::max<int>(awareRange.right, awareRange.bottom) + 2;
     }
 
+#if DEBUG_BUBBLE == 1
+    const int extraRadius = 1;
+    const float brightnessLevel = 0.5;
+#else
     const int extraRadius = intensity > 1 ? 2.2 : 1.3;
-    const int radius = (Otc::TILE_PIXELS * scaleFactor) * extraRadius;
     const float brightnessLevel = 0.1;
+#endif
+
+    const int radius = (Otc::TILE_PIXELS * scaleFactor) * extraRadius;
     const float brightness = brightnessLevel + (intensity / static_cast<float>(MAX_LIGHT_INTENSITY)) * brightnessLevel;
-    const Position& posTile = pos.isValid() ? pos : m_mapView->getPosition(center, m_mapView->m_srcRect.size());
+    Position posTile = pos.isValid() ? pos : m_mapView->getPosition(center, m_mapView->m_srcRect.size());
     const Point& cleanPoint = Point(16, 16) * scaleFactor;
 
 
-    Point& moveOffset = Point();
+    std::pair< Point, Point> extraOffset = std::make_pair(Point(), Point());
+    Position oldTile;
     CreaturePtr creature;
     bool isMoving = false;
+    bool checkAround = false;
     if(thing && thing->isCreature()) {
         creature = thing->static_self_cast<Creature>();
-        if(!creature->getWalkOffset().isNull()) isMoving = true;
-        moveOffset = (creature->getWalkOffset() + Point(16, 16)) * scaleFactor;
+        if(!creature->getWalkOffset().isNull()) {
+            isMoving = true;
+            //posTile = creature->getLastStepFromPosition();
+        }
+
+        extraOffset.first = Point(16, 16);
+        extraOffset.second = creature->getWalkOffset() + extraOffset.first;
+
+        extraOffset.first *= scaleFactor;
+        extraOffset.second *= scaleFactor;
+        checkAround = intensity >= 4;
     }
 
     Color color = Color::from8bit(light.color);
@@ -163,77 +182,69 @@ void LightView::addLightSourceV2(const Position& pos, const Point& center, float
     color.setGreen(color.gF() * brightness);
     color.setBlue(color.bF() * brightness);
 
-    const auto& dimensions = getDimensions(intensity);
-    for each(const auto dimension in dimensions)
+    const auto& dimension = getDimensionConfig(intensity);
+    for each(const auto position in dimension.positions)
     {
-        const auto x = dimension.first;
-        const auto y = dimension.second;
+        const auto x = position.x;
+        const auto y = position.y;
 
         auto posLight = posTile.translated(x, y);
         int index = getLightSourceIndex(posLight);
-        if(index == -1 || !canDraw(posLight)) {
+
+        if(index == -1) {
             continue;
         }
 
         auto& lightSource = m_lightMap[index];
-        if(lightSource.second.hasLight()) continue;
 
-        auto _moveOffset = moveOffset;
-        if(false) {
-            //g_logger.info(std::to_string(creature->get));
-            if(!moveOffset.isNull()) {
-                Position posCheck = posLight.translatedToDirection(creature->getDirection());
-                if(!canDraw(posCheck)) _moveOffset = cleanPoint;
-                else {
-                    /*index = getLightSourceIndex(posCheck);
-                    if(index > -1) {
-                        const auto& nextLightSource = m_lightMap[index].first;
-                        if(nextLightSource.color == color)
-                            _moveOffset = cleanPoint;
-                    }*/
-                }
-            }
-
-            if(!_moveOffset.isNull()) {
-                Position posCheck = posLight.translatedToReverseDirection(creature->getDirection());
-                if(!canDraw(posCheck))_moveOffset = cleanPoint;
-                else {
-                    /*index = getLightSourceIndex(posCheck);
-                    if(index > -1) {
-                        const auto& nextLightSource = m_lightMap[index].first;
-                        if(nextLightSource.color == color)
-                            _moveOffset = cleanPoint;
-                    }*/
-                }
-            }
-        }
-
-        const auto& newCenter = center + ((Point(x, y) * Otc::TILE_PIXELS) * scaleFactor);
+        if(!canDraw(posLight)) continue;
+        if(lightSource.first.hasLight() && (intensity == 1 || !dimension.isEdge(posLight))) continue;
 
         LightSource light;
-        light.center = newCenter + _moveOffset;
         light.color = color;
         light.radius = radius;
         light.pos = posLight;
         light.intensity = intensity;
+        light.canMove = lightSource.first.canMove;
 
+        if(checkAround) {
+            Position posCheck = posLight.translatedToDirection(creature->getDirection());
+            if(!dimension.isEdge(posCheck) && !canDraw(posCheck)) {
+                light.canMove = false;
 
+                index = getLightSourceIndex(posCheck);
+                if(index > -1) {
+                    auto& nextLightSource = m_lightMap[index].first;
+                    nextLightSource.canMove = false;
+                }
+            }
 
-        if(lightSource.first.hasLight()) {
-            lightSource.second = light;
-        } else {
-            lightSource.first = light;
+            posCheck = posLight.translatedToReverseDirection(creature->getDirection());
+            if(!dimension.isEdge(posCheck) && !canDraw(posCheck)) {
+                light.canMove = false;
+                index = getLightSourceIndex(posCheck);
+                if(index > -1) {
+                    auto& nextLightSource = m_lightMap[index].first;
+                    nextLightSource.canMove = false;
+                }
+            }
         }
+
+        light.center = center + ((Point(x, y) * Otc::TILE_PIXELS) * scaleFactor) + (light.canMove ? extraOffset.second : extraOffset.first);
+        lightSource.first = light;
     }
 }
 
-std::vector<std::pair<int8_t, int8_t>> LightView::getDimensions(const uint8 intensity)
+DimensionConfig LightView::getDimensionConfig(const uint8 intensity)
 {
     auto& dimension = m_dimensionCache[intensity];
-    if(dimension.empty()) {
+    if(dimension.positions.empty()) {
         const int size = std::max<int>(1, std::floor(static_cast<float>(intensity) / 1.3)),
             start = size * -1,
             middle = size / 2;
+
+        dimension.min = 0;
+        dimension.max = size;
 
         for(int x = start; x <= size; ++x) {
             for(int y = start; y <= size; ++y) {
@@ -245,7 +256,24 @@ std::vector<std::pair<int8_t, int8_t>> LightView::getDimensions(const uint8 inte
                     absY == absX || absX - middle == absY || absX == absY - middle || absX - middle == absY - middle
                     ) || absX == size && absY == 0 || absY == size && absX == 0) continue;
 
-                dimension.push_back(std::make_pair(x, y));
+                if(x < dimension.min)
+                    dimension.min = x;
+
+                if(x > dimension.max)
+                    dimension.max = x;
+
+                dimension.positions.push_back(Position(x, y, 255));
+            }
+        }
+
+        for each(auto & pos in dimension.positions)
+        {
+            for each(auto & posAround in pos.getPositionsAround())
+            {
+                if(std::find(dimension.positions.begin(), dimension.positions.end(), posAround) == dimension.positions.end()) {
+                    dimension.edges.push_back(pos);
+                    break;
+                }
             }
         }
     }
@@ -266,13 +294,13 @@ int LightView::getLightSourceIndex(const Position& pos)
 bool LightView::canDraw(const Position& pos)
 {
     TilePtr tile = g_map.getTile(pos);
-    if(!tile || tile->isCovered() || tile->isTopGround() && !tile->hasBottomToDraw() || tile->isBlockLight()) {
+    if(!tile || tile->isCovered() || tile->isTopGround() && !tile->hasBottomToDraw() || !tile->hasGround()) {
         return false;
     }
 
-    if(pos.z != m_mapView->getCachedFirstVisibleFloor()) {
+    if(pos.z > m_mapView->getCachedFirstVisibleFloor()) {
         tile = g_map.getTile(pos.translated(1, 1, -1));
-        if(tile && tile->isBlockLight()) return false;
+        if(tile && tile->blockLight()) return false;
     }
 
     return true;

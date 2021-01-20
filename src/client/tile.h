@@ -155,7 +155,8 @@ public:
     const bool hasBorderShadowColor() { return m_borderShadowColor != Color::white; }
 
     const bool isCovered() { return m_covered; };
-    const bool isBlockLight() { return m_countFlag.hasNoWalkableEdge > 0 && !getGround(); };
+    const bool blockLight() { return m_countFlag.hasNoWalkableEdge && !hasGround(); };
+    const bool hasGround() { return getGround() != nullptr; };
 
 private:
     struct CountFlag {

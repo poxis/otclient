@@ -32,18 +32,33 @@
 struct LightSource {
     Color color = Color::alpha;
     Point center;
+    Point extraOffset;
     int radius;
     Position pos;
     uint8_t intensity;
+    bool canMove = true;
 
-    void reset() { pos = Position(); color = Color::alpha; }
+    void reset() { pos = Position(); color = Color::alpha; canMove = true; }
     bool hasLight() const { return color != Color::alpha; }
     bool isValid() const { return radius == -1; }
+};
+
+struct DimensionConfig {
+    int min = 0, max = 0;
+    std::vector<Position> positions;
+    std::vector<Position> edges;
+
+    bool isEdge(const Position pos) const
+    {
+        return std::find(edges.begin(), edges.end(), pos) != edges.end();
+    }
 };
 
 class LightView : public LuaObject
 {
 public:
+
+
     LightView(const MapViewPtr& mapView, const uint8 version);
 
     void reset();
@@ -59,15 +74,16 @@ public:
     bool isDark() const { return m_globalLight.intensity < 250; }
 
     uint8 getVersion() const { return m_version; }
-
 private:
+
+
     void addLightSourceV1(const Point& center, float scaleFactor, const Light& light);
     void addLightSourceV2(const Position& pos, const Point& center, float scaleFactor, const Light& light, const ThingPtr& thing);
     void drawGlobalLight(const Light& light);
     void drawLightSource(const LightSource& light);
     bool canDraw(const Position& pos);
 
-    std::vector<std::pair<int8_t, int8_t>> getDimensions(const uint8 intensity);
+    DimensionConfig getDimensionConfig(const uint8 intensity);
 
     Light m_globalLight;
 
@@ -79,7 +95,7 @@ private:
     FrameBufferPtr m_lightbuffer;
 
     std::vector<std::pair<LightSource, LightSource>> m_lightMap;
-    std::array<std::vector<std::pair<int8_t, int8_t>>, 255> m_dimensionCache;
+    std::array<DimensionConfig, 255> m_dimensionCache;
     MapViewPtr m_mapView;
 
     int getLightSourceIndex(const Position& pos);
