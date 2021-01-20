@@ -48,10 +48,10 @@ struct LightSource {
     Position pos;
     uint8_t intensity;
     bool canMove = true;
+    bool reverter = false;
     DimensionConfig dimension;
-    int opacity = 1.0f;
 
-    void reset() { pos = Position(); color = Color::alpha; canMove = true; }
+    void reset() { pos = Position(); color = Color::alpha; canMove = true; reverter = false; }
     bool hasLight() const { return color != Color::alpha; }
     bool isValid() const { return radius == -1; }
 };
