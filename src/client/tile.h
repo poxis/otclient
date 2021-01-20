@@ -211,6 +211,8 @@ private:
 
     stdext::boolean<false> m_covered;
     stdext::boolean<false> m_completelyCovered;
+
+
 };
 
 #endif

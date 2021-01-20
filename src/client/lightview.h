@@ -29,20 +29,6 @@
 #include "declarations.h"
 #include "thingtype.h"
 
-struct LightSource {
-    Color color = Color::alpha;
-    Point center;
-    Point extraOffset;
-    int radius;
-    Position pos;
-    uint8_t intensity;
-    bool canMove = true;
-
-    void reset() { pos = Position(); color = Color::alpha; canMove = true; }
-    bool hasLight() const { return color != Color::alpha; }
-    bool isValid() const { return radius == -1; }
-};
-
 struct DimensionConfig {
     int min = 0, max = 0;
     std::vector<Position> positions;
@@ -52,6 +38,22 @@ struct DimensionConfig {
     {
         return std::find(edges.begin(), edges.end(), pos) != edges.end();
     }
+};
+
+struct LightSource {
+    Color color = Color::alpha;
+    Point center;
+    std::pair<Point, Point> extraOffset;
+    int radius;
+    Position pos;
+    uint8_t intensity;
+    bool canMove = true;
+    DimensionConfig dimension;
+    int opacity = 1.0f;
+
+    void reset() { pos = Position(); color = Color::alpha; canMove = true; }
+    bool hasLight() const { return color != Color::alpha; }
+    bool isValid() const { return radius == -1; }
 };
 
 class LightView : public LuaObject
@@ -94,7 +96,7 @@ private:
 
     FrameBufferPtr m_lightbuffer;
 
-    std::vector<std::pair<LightSource, LightSource>> m_lightMap;
+    std::vector<LightSource> m_lightMap;
     std::array<DimensionConfig, 255> m_dimensionCache;
     MapViewPtr m_mapView;
 

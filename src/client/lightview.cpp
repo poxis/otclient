@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#define DEBUG_BUBBLE 0
+#define DEBUG_BUBBLE 1
 
 #include "lightview.h"
 #include <framework/graphics/framebuffer.h>
@@ -123,8 +123,8 @@ void LightView::addLightSourceV1(const Point& center, float scaleFactor, const L
     color.setBlue(color.bF() * brightness);
 
     if(m_blendEquation == Painter::BlendEquation_Add && !m_lightMap.empty()) {
-        const std::pair< LightSource, LightSource> prevSource = m_lightMap.back();
-        if(prevSource.first.center == center && prevSource.first.color == color && prevSource.first.radius == radius)
+        const LightSource prevSource = m_lightMap.back();
+        if(prevSource.center == center && prevSource.color == color && prevSource.radius == radius)
             return;
     }
 
@@ -132,13 +132,13 @@ void LightView::addLightSourceV1(const Point& center, float scaleFactor, const L
     source.center = center;
     source.color = color;
     source.radius = radius;
-    m_lightMap.push_back(std::make_pair(source, LightSource()));
+    m_lightMap.push_back(source);
 }
 
 void LightView::addLightSourceV2(const Position& pos, const Point& center, float scaleFactor, const Light& light, const ThingPtr& thing)
 {
-    int intensity = light.intensity;
-    if(light.intensity > MAX_LIGHT_INTENSITY) {
+    int intensity = 5;// light.intensity;
+    if(intensity > MAX_LIGHT_INTENSITY) {
         const auto& awareRange = m_mapView->m_awareRange;
         intensity = std::max<int>(awareRange.right, awareRange.bottom) + 2;
     }
@@ -157,7 +157,7 @@ void LightView::addLightSourceV2(const Position& pos, const Point& center, float
     const Point& cleanPoint = Point(16, 16) * scaleFactor;
 
 
-    std::pair< Point, Point> extraOffset = std::make_pair(Point(), Point());
+    std::pair<Point, Point> extraOffset = std::make_pair(Point(), Point());
     Position oldTile;
     CreaturePtr creature;
     bool isMoving = false;
@@ -187,51 +187,95 @@ void LightView::addLightSourceV2(const Position& pos, const Point& center, float
     {
         const auto x = position.x;
         const auto y = position.y;
+        Position virtualPos = Position(x, y, 255);
 
         auto posLight = posTile.translated(x, y);
-        int index = getLightSourceIndex(posLight);
+        if(!canDraw(posLight)) continue;
 
-        if(index == -1) {
-            continue;
-        }
+        int index = getLightSourceIndex(posLight);
+        if(index == -1) continue;
 
         auto& lightSource = m_lightMap[index];
-
-        if(!canDraw(posLight)) continue;
-        if(lightSource.first.hasLight() && (intensity == 1 || !dimension.isEdge(posLight))) continue;
+        if(lightSource.hasLight() && lightSource.intensity > intensity) continue;
 
         LightSource light;
         light.color = color;
         light.radius = radius;
         light.pos = posLight;
         light.intensity = intensity;
-        light.canMove = lightSource.first.canMove;
+        light.canMove = lightSource.canMove;
+        light.dimension = dimension;
 
         if(checkAround) {
-            Position posCheck = posLight.translatedToDirection(creature->getDirection());
-            if(!dimension.isEdge(posCheck) && !canDraw(posCheck)) {
-                light.canMove = false;
+            bool isEdge = dimension.isEdge(virtualPos);
 
-                index = getLightSourceIndex(posCheck);
+            Position posCheck = posLight.translatedToDirection(creature->getDirection());
+            /*if(!canDraw(posCheck) || !isEdge && !dimension.isEdge(virtualPos.translatedToDirection(creature->getDirection()))) {
+
+             /*   index = getLightSourceIndex(posCheck);
                 if(index > -1) {
-                    auto& nextLightSource = m_lightMap[index].first;
-                    nextLightSource.canMove = false;
+                    auto& nextLightSource = m_lightMap[index];
+                    if(nextLightSource.color != color) {
+                        light.canMove = false;
+                        m_lightMap[index].canMove = false;
+                    }
                 }
             }
 
             posCheck = posLight.translatedToReverseDirection(creature->getDirection());
-            if(!dimension.isEdge(posCheck) && !canDraw(posCheck)) {
-                light.canMove = false;
+            if(!canDraw(posCheck) || !isEdge && !dimension.isEdge(virtualPos.translatedToReverseDirection(creature->getDirection()))) {
                 index = getLightSourceIndex(posCheck);
                 if(index > -1) {
-                    auto& nextLightSource = m_lightMap[index].first;
+                    auto& nextLightSource = m_lightMap[index];
+                    if(nextLightSource.color != color) {
+                        light.canMove = false;
+                        m_lightMap[index].canMove = false;
+                    }
+                }
+            }*/
+        }
+
+        light.center = center + ((Point(x, y) * Otc::TILE_PIXELS) * scaleFactor);
+        light.extraOffset = extraOffset;
+
+        if(dimension.isEdge(virtualPos))
+            lightSource = light;
+    }
+
+    for each(const auto position in dimension.positions)
+    {
+        const auto x = position.x;
+        const auto y = position.y;
+        Position virtualPos = Position(x, y, 255);
+
+        auto posLight = posTile.translated(x, y);
+        int index = getLightSourceIndex(posLight);
+        if(index == -1) continue;
+        auto& lightSource = m_lightMap[index];
+        bool isEdge = dimension.isEdge(virtualPos);
+        if(!isEdge && checkAround) {
+
+            Position posCheck = posLight.translatedToDirection(creature->getDirection());
+            index = getLightSourceIndex(posCheck);
+            if(index > -1) {
+                auto& nextLightSource = m_lightMap[index];
+                if(!canDraw(posCheck) || nextLightSource.hasLight() && nextLightSource.color != color) {
+                    lightSource.canMove = false;
+                    nextLightSource.canMove = false;
+                } else {
+                }
+            }
+
+            posCheck = posLight.translatedToReverseDirection(creature->getDirection());
+            index = getLightSourceIndex(posCheck);
+            if(index > -1) {
+                auto& nextLightSource = m_lightMap[index];
+                if(!canDraw(posCheck) || nextLightSource.hasLight() && nextLightSource.color != color) {
+                    lightSource.canMove = false;
                     nextLightSource.canMove = false;
                 }
             }
         }
-
-        light.center = center + ((Point(x, y) * Otc::TILE_PIXELS) * scaleFactor) + (light.canMove ? extraOffset.second : extraOffset.first);
-        lightSource.first = light;
     }
 }
 
@@ -353,20 +397,18 @@ void LightView::draw(const Rect& dest, const Rect& src)
         g_painter->setCompositionMode(Painter::CompositionMode_Add);
 
         if(m_version == 1) {
-            for(const std::pair<LightSource, LightSource>& source : m_lightMap)
-                drawLightSource(source.first);
+            for(const LightSource& source : m_lightMap)
+                drawLightSource(source);
 
             m_lightMap.clear();
         } else if(m_version == 2) {
-            for(std::pair<LightSource, LightSource>& source : m_lightMap) {
-                if(source.first.pos.isValid()) {
-                    drawLightSource(source.first);
-                    source.first.reset();
-                }
-
-                if(source.second.pos.isValid()) {
-                    drawLightSource(source.second);
-                    source.second.reset();
+            for(LightSource& source : m_lightMap) {
+                if(source.pos.isValid()) {
+                    source.center += (source.canMove ? source.extraOffset.second : source.extraOffset.first);
+                    g_painter->setOpacity(0.1);
+                    drawLightSource(source);
+                    g_painter->resetOpacity();
+                    source.reset();
                 }
             }
         }
