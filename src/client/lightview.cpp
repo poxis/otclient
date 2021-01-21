@@ -96,7 +96,7 @@ void LightView::setGlobalLight(const Light& light)
 void LightView::addLightSource(const Position& pos, const Point& center, float scaleFactor, const Light& light, const ThingPtr& thing)
 {
     if(m_version == 1) {
-        Point& walkOffset = Point();
+        Point walkOffset = Point();
         if(thing && thing->isCreature()) {
             const CreaturePtr& c = thing->static_self_cast<Creature>();
             walkOffset = c->getWalkOffset();
@@ -137,7 +137,7 @@ void LightView::addLightSourceV1(const Point& center, float scaleFactor, const L
 
 void LightView::addLightSourceV2(const Position& pos, const Point& center, float scaleFactor, const Light& light, const ThingPtr& thing)
 {
-    const uint defaultIntensity = 2;
+    const uint defaultIntensity = 3;
 
     int intensity = light.intensity;
     if(intensity > MAX_LIGHT_INTENSITY) {
@@ -149,31 +149,35 @@ void LightView::addLightSourceV2(const Position& pos, const Point& center, float
     const int extraRadius = 1;
     const float brightnessLevel = 0.5;
 #else
-    const int extraRadius = intensity > 1 ? 2.2 : 1.3;
-    const float brightnessLevel = 0.1;
+    int extraRadius;
+    float brightnessLevel;
+    if(intensity > 1) {
+        extraRadius = 2.2;
+        brightnessLevel = 0.2;
+    } else {
+        extraRadius = 1.3;
+        brightnessLevel = 0.1;
+    }
+
 #endif
 
     const int radius = (Otc::TILE_PIXELS * scaleFactor) * extraRadius;
     const float brightness = brightnessLevel + (defaultIntensity / static_cast<float>(MAX_LIGHT_INTENSITY)) * brightnessLevel;
     Position posTile = pos.isValid() ? pos : m_mapView->getPosition(center, m_mapView->m_srcRect.size());
-    const Point& cleanPoint = Point(16, 16) * scaleFactor;
+    const Point cleanPoint = Point(16, 16) * scaleFactor;
 
 
     std::pair<Point, Point> extraOffset = std::make_pair(Point(), Point());
-    Position oldTile;
     CreaturePtr creature;
-    bool isMoving = false;
-    bool checkAround = false;
+    bool isMoving = false, checkAround = false;
     if(thing && thing->isCreature()) {
         creature = thing->static_self_cast<Creature>();
         if(!creature->getWalkOffset().isNull()) {
             isMoving = true;
-            //posTile = creature->getLastStepFromPosition();
         }
 
         extraOffset.first = Point(16, 16);
         extraOffset.second = creature->getWalkOffset() + extraOffset.first;
-
         extraOffset.first *= scaleFactor;
         extraOffset.second *= scaleFactor;
         checkAround = intensity >= 4;
@@ -198,23 +202,28 @@ void LightView::addLightSourceV2(const Position& pos, const Point& center, float
         if(index == -1) continue;
 
         auto& lightSource = m_lightMap[index];
-        if(lightSource.hasLight() && lightSource.intensity > intensity) continue;
+        if(lightSource.hasLight() && lightSource.originalIntensity > intensity) continue;
 
-        LightSource light;
-        light.color = color;
-        light.radius = radius;
-        light.pos = posLight;
-        light.intensity = defaultIntensity;
-        light.canMove = lightSource.canMove;
-        light.dimension = dimension;
+        LightSource newLightSource;
+        newLightSource.color = color;
+        newLightSource.radius = radius;
+        newLightSource.pos = posLight;
+        newLightSource.intensity = defaultIntensity;
+        newLightSource.originalIntensity = intensity;
+        newLightSource.canMove = lightSource.canMove;
+        newLightSource.dimension = dimension;
 
-        light.center = center + ((Point(x, y) * Otc::TILE_PIXELS) * scaleFactor);
-        light.extraOffset = extraOffset;
-        lightSource = light;
+        newLightSource.center = center + ((Point(x, y) * Otc::TILE_PIXELS) * scaleFactor);
+        newLightSource.extraOffset = extraOffset;
+        lightSource = newLightSource;
     }
 
     if(checkAround) {
         for each(const auto position in dimension.positions) {
+            const auto x = position.x;
+            const auto y = position.y;
+            Position virtualPos = Position(x, y, 255);
+
             auto posLight = posTile.translated(position.x, position.y);
             int index = getLightSourceIndex(posLight);
             if(index == -1) continue;
@@ -229,12 +238,10 @@ void LightView::addLightSourceV2(const Position& pos, const Point& center, float
                 if(lightSource.canMove)
                     lightSource.canMove = canDraw(posCheck);
 
-                if(!lightSource.canMove) {
-                    index = getLightSourceIndex(posCheck);
-                    if(index > -1) {
-                        auto& nextLightSource = m_lightMap[index];
-                        nextLightSource.canMove = lightSource.canMove;
-                    }
+                index = getLightSourceIndex(posCheck);
+                if(index > -1) {
+                    auto& nextLightSource = m_lightMap[index];
+                    nextLightSource.canMove = lightSource.canMove;
                 }
             }
         }
@@ -304,9 +311,11 @@ bool LightView::canDraw(const Position& pos)
         return false;
     }
 
-    if(pos.z > m_mapView->getCachedFirstVisibleFloor()) {
-        tile = g_map.getTile(pos.translated(1, 1, -1));
-        if(tile && tile->blockLight()) return false;
+
+    Position tilePos = pos;
+    while(tilePos.coveredUp() && tilePos.z >= m_mapView->getCachedFirstVisibleFloor()) {
+        TilePtr tile = g_map.getTile(tilePos);
+        if(tile && (tile->blockLight() || tile->isTopGround())) return false;
     }
 
     return true;

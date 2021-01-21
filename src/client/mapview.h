@@ -134,6 +134,9 @@ public:
     void setDrawManaBar(bool enable) { m_drawManaBar = enable; schedulePainting(Otc::FUpdateCreatureInformation); }
     bool isDrawingManaBar() { return m_drawManaBar; }
 
+    void setLightVersion(int version) { m_lightVersion = version; setDrawLights(false); setDrawLights(true); }
+    bool getLightVersion() { return m_lightVersion; }
+
     void move(int x, int y);
 
     void setAddLightMethod(bool add) { m_lightView->setBlendEquation(add ? Painter::BlendEquation_Add : Painter::BlendEquation_Max); }
@@ -264,6 +267,8 @@ private:
     AwareRange m_awareRange;
 
     Rect m_srcRect;
+
+    int m_lightVersion;
 };
 
 #endif

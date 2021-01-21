@@ -124,18 +124,18 @@ void MapView::draw(const Rect& rect)
                 tile->drawStart(this);
                 tile->draw(transformPositionTo2D(tile->getPosition(), cameraPosition), m_scaleFactor, m_frameCache.flags, lightView);
                 tile->drawEnd(this);
-        }
+            }
 #endif
             for(const MissilePtr& missile : g_map.getFloorMissiles(z)) {
                 missile->draw(transformPositionTo2D(missile->getPosition(), cameraPosition), m_scaleFactor, m_frameCache.flags, lightView);
             }
 
             onFloorDrawingEnd(z);
-    }
+        }
 
         if(redrawThing)
             m_frameCache.tile->release();
-}
+    }
 
     // generating mipmaps each frame can be slow in older cards
     //m_framebuffer->getTexture()->buildHardwareMipmaps();
@@ -833,7 +833,7 @@ void MapView::setDrawLights(bool enable)
     if(enable == m_drawLights) return;
 
     if(enable) {
-        m_lightView = LightViewPtr(new LightView(this, 2));
+        m_lightView = LightViewPtr(new LightView(this, m_lightVersion));
         m_lightView->resize();
     } else m_lightView = nullptr;
 

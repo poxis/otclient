@@ -47,6 +47,7 @@ struct LightSource {
     int radius;
     Position pos;
     uint8_t intensity;
+    uint8_t originalIntensity;
     bool canMove = true;
     bool reverter = false;
     DimensionConfig dimension;
