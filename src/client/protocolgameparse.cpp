@@ -2221,8 +2221,11 @@ CreaturePtr ProtocolGame::getCreature(const InputMessagePtr& msg, int type)
             else {
                 if(id >= Proto::PlayerStartId && id < Proto::PlayerEndId)
                     creatureType = Proto::CreatureTypePlayer;
-                else creatureType = Proto::CreatureTypeNpc;
-            }
+				else if (id >= Proto::MonsterStartId && id < Proto::MonsterEndId)
+					creatureType = Proto::CreatureTypeMonster;
+				else
+					creatureType = Proto::CreatureTypeNpc;
+			}
 
             const std::string name = g_game.formatCreatureName(msg->getString());
 
