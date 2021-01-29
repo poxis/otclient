@@ -653,7 +653,7 @@ int ThingType::getAnimationPhases()
 {
     if(m_animator) return m_animator->getAnimationPhases();
 
-    if(m_category == ThingCategoryCreature) return m_animationPhases - 1;
+    if(m_category == ThingCategoryCreature) return m_animationPhases; //  - 1 bug updateWalkAnimation?
 
     return m_animationPhases;
 }
