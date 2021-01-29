@@ -501,7 +501,7 @@ void Creature::updateWalkAnimation()
     if(m_outfit.getCategory() != ThingCategoryCreature)
         return;
 
-    const int footAnimPhases = getTotalAnimationPhase();
+    const int footAnimPhases = getTotalAnimationPhase() -1; // fix 
     if(footAnimPhases == 0) {
         // looktype has no animations
         return;
